@@ -178,6 +178,7 @@ function createWindow() {
     autoHideMenuBar: true,
     backgroundColor: "#0b0d10",
     title: "K86 Studio",
+    icon: path.join(__dirname, "..", "assets", "k86.ico"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
