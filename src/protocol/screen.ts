@@ -63,9 +63,14 @@ export function encodeScreenPixels(
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
       const i = (y * width + x) * 4;
-      const [hi, lo] = rgbTo565(rgba[i], rgba[i + 1], rgba[i + 2]);
-      out[o++] = hi;
-      out[o++] = lo;
+      // Inline the RGB565 conversion: returning a tuple per pixel creates
+      // millions of short-lived arrays for a 106-frame animation.
+      const value =
+        ((rgba[i] >> 3) << 11) |
+        ((rgba[i + 1] >> 2) << 5) |
+        (rgba[i + 2] >> 3);
+      out[o++] = value >> 8;
+      out[o++] = value & 0xff;
     }
   }
   return out;

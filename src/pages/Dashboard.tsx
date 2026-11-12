@@ -262,8 +262,8 @@ export default function Dashboard() {
 
       <section className="features" aria-labelledby="features-title">
         <div className="section-heading">
-          <h3 id="features-title">Recursos planejados</h3>
-          <p>Cada área ganha função em uma fase posterior.</p>
+          <h3 id="features-title">Recursos</h3>
+          <p>Screen está disponível; as demais áreas chegam nas próximas fases.</p>
         </div>
 
         <ul className="feature-grid">
@@ -276,7 +276,9 @@ export default function Dashboard() {
               </span>
               <h4>{feature.label}</h4>
               <p>{feature.description}</p>
-              <span className="feature-status">Planejado</span>
+              <span className="feature-status">
+                {feature.id === "screen" ? "Disponível" : "Planejado"}
+              </span>
             </li>
           ))}
         </ul>

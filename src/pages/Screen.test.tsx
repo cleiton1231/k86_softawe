@@ -22,6 +22,14 @@ const fakeAnimation = {
   frames: [new Uint8ClampedArray(240 * 135 * 4)],
 };
 
+const twoFrameAnimation = {
+  ...fakeAnimation,
+  frames: [
+    new Uint8ClampedArray(240 * 135 * 4),
+    new Uint8ClampedArray(240 * 135 * 4),
+  ],
+};
+
 const writeSession = {
   writesAllowed: true,
   recognized: true,
@@ -43,6 +51,7 @@ function context(state: unknown, source?: "webhid" | "demo") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete (window as { k86Native?: unknown }).k86Native;
   mockDecode.mockResolvedValue(fakeAnimation);
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
 });
@@ -102,6 +111,25 @@ describe("ScreenPage", () => {
     });
 
     expect(await screen.findByText("GIF inválido")).toBeInTheDocument();
+  });
+
+  it("blocks animated GIFs when the native desktop bridge is absent", async () => {
+    mockDecode.mockResolvedValue(twoFrameAnimation);
+    mockUseDeviceContext.mockReturnValue(
+      context({ status: "connected", session: writeSession }, "webhid"),
+    );
+    render(<ScreenPage onNavigate={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Escolher arquivo de imagem ou GIF"), {
+      target: {
+        files: [new File([new Uint8Array([1, 2])], "anim.gif", { type: "image/gif" })],
+      },
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: /app desktop/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enviar para a tela" })).toBeDisabled();
   });
 
   it("disables sending in demo mode even with a connected fake session", async () => {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { clampDelayMs, fitToScreen } from "./decode";
+import {
+  assertFrameBudget,
+  assertSourceDimensions,
+  clampDelayMs,
+  fitToScreen,
+} from "./decode";
 
 describe("fitToScreen", () => {
   it("keeps an exact 16:9 source unchanged", () => {
@@ -42,5 +47,19 @@ describe("clampDelayMs", () => {
     expect(clampDelayMs(50)).toBe(50);
     expect(clampDelayMs(999)).toBe(255);
     expect(clampDelayMs(Number.NaN)).toBe(50);
+  });
+});
+
+describe("decode guards", () => {
+  it("accepts the 106-frame budget and rejects one more frame", () => {
+    expect(() => assertFrameBudget(106)).not.toThrow();
+    expect(() => assertFrameBudget(107)).toThrow(/106/);
+  });
+
+  it("rejects zero, oversized dimensions and huge pixel counts", () => {
+    expect(() => assertSourceDimensions(240, 135)).not.toThrow();
+    expect(() => assertSourceDimensions(0, 135)).toThrow(/dimens/i);
+    expect(() => assertSourceDimensions(8193, 1)).toThrow(/dimens/i);
+    expect(() => assertSourceDimensions(4096, 8192)).toThrow(/dimens/i);
   });
 });

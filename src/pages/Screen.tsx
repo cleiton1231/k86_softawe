@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import type { RouteId } from "../app/routes";
 import { useDeviceContext } from "../hid/device-context";
+import { hasNativeHid } from "../hid/native";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../protocol/screen";
 import { useScreenUpload } from "../screen/useScreenUpload";
 
@@ -13,6 +14,7 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
   const session =
     connectionState.status === "connected" ? connectionState.session : undefined;
   const isDemo = connectionState.source === "demo";
+  const native = hasNativeHid();
   const {
     state,
     maxFrames,
@@ -27,6 +29,7 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageDataRef = useRef<ImageData | null>(null);
 
   const animation =
     state.status === "ready" || state.status === "sending"
@@ -37,9 +40,13 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
   const slot =
     state.status === "ready" || state.status === "sending" ? state.slot : 4;
   const sending = state.status === "sending";
+  // WebHID takes ~100 ms per feature report; a single frame already has 1.158
+  // pages. Animations are only practical through the Electron native bridge.
+  const desktopOnly = !native && (animation?.frames.length ?? 0) > 1;
   const canSend =
     Boolean(session?.writesAllowed) &&
     !isDemo &&
+    !desktopOnly &&
     state.status === "ready" &&
     Boolean(animation);
 
@@ -53,7 +60,8 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const frame = animation.frames[Math.min(frameIndex, animation.frames.length - 1)];
-    const image = ctx.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+    const image = imageDataRef.current ?? ctx.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+    imageDataRef.current = image;
     image.data.set(frame);
     ctx.putImageData(image, 0, 0);
   }, [animation, frameIndex]);
@@ -75,6 +83,13 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
     setConfirming(false);
     void send(session);
   };
+
+  const frameCount = animation?.frames.length ?? 1;
+  const estimatedSeconds = Math.max(1, Math.ceil(frameCount * 3.6));
+  const estimatedTime =
+    estimatedSeconds < 60
+      ? `${estimatedSeconds} s`
+      : `~${Math.ceil(estimatedSeconds / 60)} min`;
 
   return (
     <section className="page screen-page" aria-labelledby="screen-title">
@@ -123,6 +138,18 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
           <p>
             No modo demo o preview e a timeline funcionam, mas o envio fica
             desativado. Conecte o K86 real para gravar na tela.
+          </p>
+        </div>
+      ) : null}
+
+      {desktopOnly ? (
+        <div className="screen-readonly-card" role="note">
+          <span className="phase-tag">App desktop</span>
+          <h3>Animações exigem o app desktop</h3>
+          <p>
+            No navegador, o WebHID leva cerca de 100 ms por página e um GIF
+            levaria horas. Abra o K86 Studio no Electron para enviar animações.
+            Imagens estáticas continuam disponíveis no navegador.
           </p>
         </div>
       ) : null}
@@ -270,7 +297,8 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
               <h4 id="screen-confirm-title">Confirmar envio para o slot {slot + 1}?</h4>
               <p>
                 Isso grava na flash da tela e pode substituir o conteúdo atual
-                do slot. Use cabo USB.
+                do slot. Use cabo USB. Tempo estimado: {estimatedTime}; a carga
+                do computador e o cabo podem aumentar esse tempo.
               </p>
               <div className="screen-confirm-actions">
                 <button type="button" className="button button-primary" onClick={confirmSend}>

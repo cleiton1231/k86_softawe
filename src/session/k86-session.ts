@@ -244,13 +244,18 @@ export class K86Session {
     if (this.transport.sendScreenPackets) {
       const packets = [announce, ...pageBatches.flat()];
       const pagesPerFrame = Math.max(1, pageBatches[0].length);
+      let lastDone = 0;
       await this.transport.sendScreenPackets(
         packets,
         (sent) => {
+          // The native process reports every frame boundary plus an initial
+          // "starting frame 1" event. The UI only needs one update per frame.
           const frameDone = Math.min(
             frameCount,
             Math.max(1, Math.ceil((sent - 1) / pagesPerFrame)),
           );
+          if (frameDone === lastDone) return;
+          lastDone = frameDone;
           options.onProgress?.(frameDone, frameCount);
         },
         signal,

@@ -27,6 +27,21 @@ class RecordingTransport implements HidTransport {
   async close(): Promise<void> {}
 }
 
+class FastScreenTransport extends RecordingTransport {
+  readonly progress: Array<[number, number]> = [];
+
+  async sendScreenPackets(
+    _packets: Uint8Array[],
+    onProgress?: (sent: number, total: number) => void,
+  ): Promise<void> {
+    onProgress?.(1, 0);
+    onProgress?.(100, 0);
+    onProgress?.(1159, 0);
+    onProgress?.(1159, 0);
+    onProgress?.(2317, 0);
+  }
+}
+
 function identifyReply(deviceId: number): Uint8Array {
   const reply = new Uint8Array(REPORT_LEN);
   reply[0] = 0x8f;
@@ -99,6 +114,25 @@ describe("K86Session screen transfer", () => {
     expect(pages).toHaveLength(2 * Math.ceil((SCREEN_WIDTH * SCREEN_HEIGHT * 2) / 56));
     expect(pages.filter((p) => p[1] === 0)[0][2]).toBe(2);
     expect(pages.filter((p) => p[1] === 1)[0][2]).toBe(2);
+  });
+
+  it("collapses duplicate native progress reports per frame", async () => {
+    const t = new FastScreenTransport();
+    const session = await openSession(t);
+    const progress: Array<[number, number]> = [];
+
+    await session.sendScreenAnimation(animation(2), {
+      slot: 0,
+      pageDelayMs: 0,
+      ackDelayMs: 0,
+      ackPollMs: 0,
+      onProgress: (done, total) => progress.push([done, total]),
+    });
+
+    expect(progress).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
   });
 
   it("aborts before sending pages when the announce is not acknowledged", async () => {

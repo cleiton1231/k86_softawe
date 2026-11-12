@@ -36,6 +36,7 @@ function errorMessage(error: unknown): string {
 export function useScreenUpload() {
   const [state, setState] = useState<ScreenUploadState>({ status: "idle" });
   const abortRef = useRef<AbortController | null>(null);
+  const decodeTokenRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -44,10 +45,11 @@ export function useScreenUpload() {
   }, []);
 
   const loadFile = useCallback(async (file: File) => {
+    const token = ++decodeTokenRef.current;
     abortRef.current?.abort();
     abortRef.current = null;
 
-    if (!file.type.startsWith("image/")) {
+    if (!file.type.startsWith("image/") && !/\.(gif|png|webp|jpe?g)$/i.test(file.name)) {
       setState({ status: "error", message: "selecione um arquivo de imagem ou GIF" });
       return;
     }
@@ -59,6 +61,7 @@ export function useScreenUpload() {
     setState({ status: "decoding", fileName: file.name });
     try {
       const animation = await decodeScreenFile(file);
+      if (token !== decodeTokenRef.current) return;
       if (animation.frames.length > FRAME_LIMIT) {
         setState({
           status: "error",
@@ -74,6 +77,7 @@ export function useScreenUpload() {
         slot: 4,
       });
     } catch (error) {
+      if (token !== decodeTokenRef.current) return;
       setState({ status: "error", message: errorMessage(error) });
     }
   }, []);
@@ -124,7 +128,10 @@ export function useScreenUpload() {
         onProgress: (done, total) => {
           if (controller.signal.aborted) return;
           setState((latest) =>
-            latest.status === "sending" ? { ...latest, done, total } : latest,
+            latest.status === "sending" &&
+            (latest.done !== done || latest.total !== total)
+              ? { ...latest, done, total }
+              : latest,
           );
         },
       });
