@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "electron/main.cjs",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "vite",
@@ -10,9 +11,13 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "electron:dev": "concurrently -k -s first \"vite\" \"wait-on http://127.0.0.1:5173 && electron . --dev\"",
+    "electron:debug": "concurrently -k -s first \"vite\" \"wait-on http://127.0.0.1:5173 && electron . --dev --remote-debugging-port=9223\"",
+    "electron:start": "npm run build && electron ."
   },
   "dependencies": {
+    "node-hid": "^3.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -22,9 +27,12 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.2.1",
+    "electron": "^45.3.1",
     "jsdom": "^25.0.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "wait-on": "^9.0.1"
   }
 }

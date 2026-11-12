@@ -45,9 +45,7 @@ describe("Dashboard", () => {
     expect(
       screen.queryByRole("button", { name: "Desconectar" }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Somente leitura nesta fase"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Pronto para conectar")).toBeInTheDocument();
     expect(screen.queryByText("Demo")).not.toBeInTheDocument();
     expect(
       screen.getByText(/webhid não está disponível neste navegador/i),
@@ -72,7 +70,9 @@ describe("Dashboard", () => {
     expect(screen.getByText("1168")).toBeInTheDocument();
     expect(screen.getByText("yc500")).toBeInTheDocument();
     expect(screen.getByText("ANSI, sem cedilha")).toBeInTheDocument();
-    expect(screen.getByText("Somente leitura nesta fase")).toBeInTheDocument();
+    expect(
+      screen.getByText("Demonstração: envio desativado"),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Desconectar" }));
 

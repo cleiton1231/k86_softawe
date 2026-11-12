@@ -83,7 +83,7 @@ export default function ScreenPage({ onNavigate }: ScreenPageProps) {
         <h2 id="screen-title">Screen</h2>
         <p className="lede">
           Envie uma imagem ou um GIF para a tela TFT 240x135 do K86. O preview
-          e a decodificação acontecem no navegador; nada sai daqui.
+          e a decodificação acontecem no seu computador; nada sai daqui.
         </p>
       </header>
 

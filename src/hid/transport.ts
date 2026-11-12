@@ -17,4 +17,13 @@ export interface HidTransport {
   onDisconnect(listener: () => void): void;
   /** Caller-initiated teardown. */
   close(): Promise<void>;
+  /**
+   * Optional fast path for a whole screen transfer. Native transports send
+   * the packet batch in one IPC call; WebHID falls back to per-page reports.
+   */
+  sendScreenPackets?(
+    packets: Uint8Array[],
+    onProgress?: (sent: number, total: number) => void,
+    signal?: AbortSignal,
+  ): Promise<void>;
 }

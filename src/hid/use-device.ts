@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { K86Session } from "../session/k86-session";
 import { FakeTransport } from "./fake";
+import { hasNativeHid, NativeHidTransport } from "./native";
 import type { HidTransport } from "./transport";
 import {
   isWebHidSupported,
@@ -8,7 +9,7 @@ import {
   requestK86Device,
 } from "./webhid";
 
-export type ConnectionSource = "webhid" | "demo";
+export type ConnectionSource = "webhid" | "native" | "demo";
 
 export type ConnectionState = {
   status: "disconnected" | "connecting" | "connected" | "error";
@@ -119,16 +120,22 @@ export function useDevice() {
   const connect = useCallback(async (): Promise<void> => {
     if (sessionRef.current) return;
 
+    const native = hasNativeHid();
     const operation = ++operationRef.current;
-    setState({ status: "connecting", source: "webhid" });
+    setState({ status: "connecting", source: native ? "native" : "webhid" });
 
     try {
-      if (!isWebHidSupported()) {
-        throw new Error(WEBHID_UNAVAILABLE);
+      let transport: HidTransport;
+      if (native) {
+        transport = await NativeHidTransport.open();
+      } else {
+        if (!isWebHidSupported()) {
+          throw new Error(WEBHID_UNAVAILABLE);
+        }
+        const device = await requestK86Device();
+        transport = await openWebHidTransport(device);
       }
 
-      const device = await requestK86Device();
-      const transport = await openWebHidTransport(device);
       const session = await K86Session.open(transport);
 
       if (operation !== operationRef.current) {
@@ -138,7 +145,7 @@ export function useDevice() {
         );
         return;
       }
-      adoptSession(session, transport, "webhid");
+      adoptSession(session, transport, native ? "native" : "webhid");
     } catch (error) {
       if (operation !== operationRef.current) return;
       setState({ status: "error", error: describeError(error) });

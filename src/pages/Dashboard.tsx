@@ -1,6 +1,7 @@
 import { routes } from "../app/routes";
 import type { PhysicalLayout } from "../devices/types";
 import { useDeviceContext } from "../hid/device-context";
+import { hasNativeHid } from "../hid/native";
 import { isWebHidSupported } from "../hid/webhid";
 
 const features = routes.filter((route) => route.id !== "dashboard");
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const session = state.status === "connected" ? state.session : undefined;
   const busy = state.status === "connecting";
   const isDemo = state.source === "demo";
+  const native = hasNativeHid();
   const webHidSupported = isWebHidSupported();
   const statusText =
     state.status === "connected" && isDemo
@@ -35,8 +37,8 @@ export default function Dashboard() {
         <p className="eyebrow">Central de controle</p>
         <h2 id="dashboard-title">Dashboard</h2>
         <p className="lede">
-          Conecte o K86 por WebHID para identificar o modelo em modo somente
-          leitura. A conexão é local: nenhum dado sai deste navegador.
+          Conecte o K86 para identificar o modelo e configurar a tela. A conexão
+          é local: nenhum dado sai deste aplicativo.
         </p>
       </header>
 
@@ -58,7 +60,17 @@ export default function Dashboard() {
             </span>
             <div className="card-tags">
               {isDemo && <span className="demo-badge">Demo</span>}
-              <span className="phase-tag">Somente leitura</span>
+              <span className="phase-tag">
+                {isDemo
+                  ? "Demonstração"
+                  : session
+                    ? session.writesAllowed
+                      ? "Tela habilitada"
+                      : "Somente leitura"
+                    : native
+                      ? "App desktop"
+                      : "Navegador"}
+              </span>
             </div>
           </div>
 
@@ -70,7 +82,7 @@ export default function Dashboard() {
                 : "Conectar teclado"}
           </h3>
 
-          {!webHidSupported && !session ? (
+          {!native && !webHidSupported && !session ? (
             <p className="webhid-notice" role="note">
               WebHID não está disponível neste navegador. Use Chrome ou Edge
               atualizado para conectar o teclado real; o modo demo funciona
@@ -94,14 +106,17 @@ export default function Dashboard() {
             </p>
           ) : busy ? (
             <p className="card-copy">
-              {state.source === "webhid"
-                ? "Aguardando a seleção do dispositivo no navegador. Mantenha o teclado conectado por USB."
-                : "Conectando ao teclado..."}
+              {state.source === "native"
+                ? "Abrindo o K86 pelo bridge nativo. Mantenha o teclado conectado por USB."
+                : state.source === "webhid"
+                  ? "Aguardando a seleção do dispositivo no navegador. Mantenha o teclado conectado por USB."
+                  : "Conectando ao teclado..."}
             </p>
           ) : (
             <p className="card-copy">
-              Abra o K86 pelo WebHID para identificar o modelo. Use Chrome ou
-              Edge atualizado e mantenha o teclado conectado por USB.
+              {native
+                ? "Conecte o K86 por USB. O app desktop acessa o teclado diretamente pelo bridge nativo, sem WebHID."
+                : "Abra o K86 pelo WebHID para identificar o modelo. Use Chrome ou Edge atualizado e mantenha o teclado conectado por USB."}
             </p>
           )}
 
@@ -137,9 +152,9 @@ export default function Dashboard() {
           )}
 
           <p className="field-note">
-            Esta fase é somente leitura: gravações e alterações no teclado ainda
-            não estão habilitadas. O modo demo usa um dispositivo virtual com ID
-            1168.
+            A gravação de tela está habilitada para o K86 de ID 1168, validada
+            em hardware. As demais gravações seguem em desenvolvimento. O modo
+            demo usa um dispositivo virtual com ID 1168.
           </p>
         </section>
 
@@ -155,8 +170,8 @@ export default function Dashboard() {
                 {!session.recognized
                   ? "O modelo não foi reconhecido. Família e layout abaixo são um padrão conservador, não informações confirmadas."
                   : isDemo
-                    ? "Sessão de demonstração com dados virtuais. Nenhum dado é enviado para fora deste navegador."
-                    : "Identificado em modo somente leitura. Nenhum dado é enviado para fora deste navegador."}
+                    ? "Sessão de demonstração com dados virtuais. Nenhum dado é enviado para fora deste aplicativo."
+                    : "Identificado localmente. Nenhum dado é enviado para fora deste aplicativo."}
               </p>
 
               <dl className="device-facts">
@@ -205,9 +220,11 @@ export default function Dashboard() {
               </dl>
 
               <p className="read-only-badge">
-                {session.readOnly
-                  ? "Somente leitura: gravação não validada"
-                  : "Somente leitura nesta fase"}
+                {isDemo
+                  ? "Demonstração: envio desativado"
+                  : session.writesAllowed
+                    ? "Gravação de tela habilitada"
+                    : "Somente leitura: gravação não validada"}
               </p>
             </>
           ) : (
@@ -237,7 +254,7 @@ export default function Dashboard() {
                 </div>
               </dl>
 
-              <p className="read-only-badge">Somente leitura nesta fase</p>
+              <p className="read-only-badge">Pronto para conectar</p>
             </>
           )}
         </section>

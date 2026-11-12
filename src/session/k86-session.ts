@@ -232,6 +232,31 @@ export class K86Session {
       bbox: { left: 0, top: 0, right: SCREEN_WIDTH, bottom: SCREEN_HEIGHT },
       slot: still ? 0 : slot,
     });
+    const pageBatches = frameData.map((data, frame) =>
+      screenPagePackets({
+        frame: still ? slot : frame,
+        frameCount,
+        delayMs,
+        data,
+      }),
+    );
+
+    if (this.transport.sendScreenPackets) {
+      const packets = [announce, ...pageBatches.flat()];
+      const pagesPerFrame = Math.max(1, pageBatches[0].length);
+      await this.transport.sendScreenPackets(
+        packets,
+        (sent) => {
+          const frameDone = Math.min(
+            frameCount,
+            Math.max(1, Math.ceil((sent - 1) / pagesPerFrame)),
+          );
+          options.onProgress?.(frameDone, frameCount);
+        },
+        signal,
+      );
+      return;
+    }
 
     // The working K86 implementation sends the announce once, waits, then
     // polls feature reports. Some Windows stacks expose the report ID at
@@ -257,13 +282,7 @@ export class K86Session {
 
     for (let frame = 0; frame < frameCount; frame++) {
       if (signal?.aborted) throw abortError();
-      const pages = screenPagePackets({
-        frame: still ? slot : frame,
-        frameCount,
-        delayMs,
-        data: frameData[frame],
-      });
-      for (const page of pages) {
+      for (const page of pageBatches[frame]) {
         if (signal?.aborted) throw abortError();
         await this.sendFeatureReport(page);
         await sleep(pageDelayMs);
