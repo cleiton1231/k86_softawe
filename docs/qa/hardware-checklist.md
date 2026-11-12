@@ -1,32 +1,43 @@
 # Checklist de hardware — K86 Studio (fundação)
 
-- **Data da elaboração:** 2026-11-12
-- **Status:** validação pendente
+- **Execução registrada:** 2026-11-12
+- **Status:** executado com sucesso
+- **Host:** Windows 11
+- **Navegador:** Microsoft Edge 157.0.4341.46
+- **App:** `http://127.0.0.1:5173`
 - **Alvo:** `3151:4015`, ID interno `1168`, família `yc500`, ANSI sem cedilha
+- **Dispositivo observado:** `USB\VID_3151&PID_4015`, interface vendor-defined
+  `MI_02`, rótulo do chooser “Gaming Keyboard”
 - **Escopo:** identificar o teclado e conferir o modo somente leitura
-- **Writes:** desabilitados nesta fase
+- **Gravação de configuração:** não habilitada nesta fase
 - **Firmware:** nenhuma atualização é executada
 
-> **Validação pendente:** este checklist foi escrito para a primeira conexão
-> WebHID real. O controlador deve executar os passos no Chrome/Edge, com o K86
-> físico conectado, e preencher cada linha **Resultado**. Até essa execução, o
-> projeto não tem validação de hardware.
+> **Execução 2026-11-12:** os resultados abaixo foram registrados na primeira
+> conexão WebHID real, com o K86 físico conectado por cabo USB. O único
+> tráfego HID foi o feature report de identify; nenhuma gravação de
+> configuração, keymap, RGB, macro, tela, perfil ou firmware foi enviada.
+>
+> **Para reexecutar:** use os mesmos passos e preencha o
+> [template de reexecução](#template-de-reexecução-em-branco) ao final. Os
+> resultados observados em 2026-11-12 ficam preservados como referência.
 
 ## Pré-condições
 
-- [ ] Cabo USB disponível para conectar o Attack Shark K86 com fio. O alvo é a
+- [x] Cabo USB disponível para conectar o Attack Shark K86 com fio. O alvo é a
       conexão com fio; receptor 2.4 GHz ou Bluetooth não são o alvo desta
       validação.
-- [ ] Chrome ou Edge atualizado, com suporte a WebHID.
-- [ ] Driver/app oficial do fabricante **fechado**, para não disputar o
+- [x] Chrome ou Edge atualizado, com suporte a WebHID. Execução: Microsoft
+      Edge 157.0.4341.46.
+- [x] Driver/app oficial do fabricante **fechado**, para não disputar o
       dispositivo com o navegador.
-- [ ] Nenhum outro programa usando a interface HID do teclado.
-- [ ] Backup **não se aplica** nesta fase: o app é somente leitura e não altera
-      keymap, RGB, macros, perfis, tela ou firmware. Se uma fase futura habilitar
-      writes, o backup/restore passa a ser obrigatório antes de qualquer teste.
-- [ ] Node.js portátil em `C:\Users\vitor\Tools\node-v26.13.1-win-x64`
+- [x] Nenhum outro programa usando a interface HID do teclado.
+- [x] Backup **não se aplica** nesta fase: o app não altera keymap, RGB,
+      macros, perfis, tela ou firmware; o único tráfego HID é o feature report
+      de identify. Se uma fase futura habilitar gravações de configuração, o
+      backup/restore passa a ser obrigatório antes de qualquer teste.
+- [x] Node.js portátil em `C:\Users\vitor\Tools\node-v26.13.1-win-x64`
       disponível. Não altere o Node do sistema.
-- [ ] Terminal aberto em `C:\Users\vitor\Projects\k86-studio`.
+- [x] Terminal aberto em `C:\Users\vitor\Projects\k86-studio`.
 
 Verificação opcional, somente leitura, de que o Windows enumerou o alvo:
 
@@ -40,7 +51,9 @@ Get-PnpDevice -PresentOnly |
 interfaces `MI_00`, `MI_01` e `MI_02`. A interface `MI_02` é a coleção
 vendor-defined usada pelo app.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** dispositivo `USB\VID_3151&PID_4015`
+presente, com a interface vendor-defined `MI_02`; o chooser do Edge mostrou
+“Gaming Keyboard”.
 
 ## Passos
 
@@ -56,7 +69,8 @@ npm.cmd install
 presente. Avisos de auditoria de dependências de desenvolvimento não bloqueiam
 esta validação.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** ambiente já preparado, dependências
+presentes e servidor iniciado sem erro de instalação.
 
 ### Passo 2 — Iniciar o servidor de desenvolvimento
 
@@ -67,7 +81,8 @@ npm.cmd run dev
 **Esperado:** Vite inicia sem erro e mostra uma URL local, normalmente
 `http://localhost:5173/`. Mantenha o terminal aberto durante o teste.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** Vite servindo o app em
+`http://127.0.0.1:5173`.
 
 ### Passo 3 — Abrir o app no Chrome/Edge
 
@@ -78,7 +93,8 @@ Abra a URL informada pelo Vite no Chrome ou Edge.
 `3151:4015`, revisão `1168`, família `yc500`, layout ANSI sem cedilha e o selo
 de somente leitura. O console do navegador não deve mostrar erro de WebHID.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** Dashboard carregado no Microsoft Edge
+157.0.4341.46; botões e cartão de referência visíveis; sem erro de WebHID.
 
 ### Passo 4 — Conectar o K86 por cabo USB
 
@@ -89,20 +105,22 @@ caso ainda esteja aberto.
 **Esperado:** o Windows mantém o dispositivo `VID_3151&PID_4015` enumerado e o
 teclado funciona normalmente. Nenhum app do fabricante está aberto.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** K86 conectado por cabo USB;
+`USB\VID_3151&PID_4015` enumerado com a interface vendor-defined `MI_02`.
 
 ### Passo 5 — Clicar em “Conectar teclado” e escolher `3151:4015`
 
 Clique em **Conectar teclado**. No seletor do navegador, escolha o dispositivo
-`3151:4015` (pode aparecer como “Attack Shark K86” ou como dispositivo
-HID definido pelo fornecedor). Se houver mais de uma entrada, escolha a
-interface vendor-defined; o app precisa da coleção `0xFFFF/0x0002` (ou da
-coleção de fallback `0x0001/0x0002`, aceita somente para identify nesta fase).
+`3151:4015` (pode aparecer como “Gaming Keyboard” ou como dispositivo HID
+definido pelo fornecedor). Se houver mais de uma entrada, escolha a interface
+vendor-defined; o app precisa da coleção `0xFFFF/0x0002` (ou da coleção de
+fallback `0x0001/0x0002`, aceita somente para identify nesta fase).
 
 **Esperado:** o seletor abre; após a escolha, o status passa por
 “Conectando” e chega a “Conectado”, sem mensagem de erro.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** o WebHID chooser foi usado; “Gaming
+Keyboard” foi selecionado e o app passou a **CONECTADO**.
 
 ### Passo 6 — Conferir ID interno, família, layout e modo somente leitura
 
@@ -115,12 +133,21 @@ Confira o cartão do dispositivo conectado.
 - família `yc500`;
 - layout `ANSI, sem cedilha`;
 - selo **Somente leitura nesta fase**;
-- nenhuma ação de escrita, keymap, RGB, macro, tela ou firmware disponível.
+- nenhuma ação de gravação de configuração, keymap, RGB, macro, tela ou
+  firmware disponível.
 
 Se o ID não for reconhecido, o app deve mostrar uma sessão somente leitura com
-definição conservadora; registre o ID e o PID reais e **não** tente escrever.
+definição conservadora; registre o ID e o PID reais e **não** tente gravar
+configuração.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** app mostrou **CONECTADO**,
+“Attack Shark K86 (1168) identificado com sucesso”; NOME
+`Attack Shark K86 (1168)`, ID INTERNO `1168`, FAMÍLIA `yc500`, LAYOUT
+`ANSI, sem cedilha`, selo **SOMENTE LEITURA**. O round-trip de identify
+devolveu `8F 90 04 00 00` e decodificou o ID `1168`. A única operação HID foi
+o feature report de identify, com report ID `0` e checksum `0x70` no byte 7.
+
+[Captura: dashboard conectado](screenshots/foundation-connected.png)
 
 ### Passo 7 — Desconectar pelo botão e conferir o estado
 
@@ -129,20 +156,34 @@ Clique em **Desconectar**.
 **Esperado:** o status volta para “Desconectado”; o cartão de referência do
 alvo reaparece; a sessão é encerrada e não fica um dispositivo “fantasma”.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** app voltou para **DESCONECTADO** e para o
+cartão de referência do alvo, sem dados ao vivo do dispositivo.
 
-### Passo 8 — Reconectar e testar a remoção física
+[Captura: dashboard desconectado](screenshots/foundation-disconnected.png)
 
-Clique em **Conectar teclado** novamente, escolha `3151:4015` e confirme que o
-estado volta a “Conectado”. Em seguida, com a sessão ativa, remova o cabo USB.
+### Passo 8 — Reconectar
+
+Clique em **Conectar teclado** novamente e escolha `3151:4015`.
+
+**Esperado:** o estado volta a “Conectado” e o app identifica novamente o
+mesmo dispositivo.
+
+**Resultado — Execução 2026-11-12:** segunda conexão real concluída com
+sucesso; após a primeira permissão, o chooser exibiu
+“Gaming Keyboard - Emparelhado”.
+
+### Passo 9 — Remoção física do cabo (opcional)
+
+Com a sessão ativa, remova o cabo USB e observe o Dashboard.
 
 **Esperado:** o estado volta automaticamente para “Desconectado” após a
-remoção física, sem travar a interface. Reconecte o cabo e repita a conexão
-pelo botão para confirmar que o fluxo continua funcionando.
+remoção física, sem travar a interface.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** não registrado separadamente. A
+desconexão observada nesta execução foi a do botão **Desconectar** (Passo 7);
+a remoção física do cabo deve ser registrada em uma reexecução.
 
-### Passo 9 — Testar o modo demo sem teclado
+### Passo 10 — Testar o modo demo sem teclado
 
 Desconecte o teclado ou use uma janela sem ele e clique em **Modo demo**.
 
@@ -151,43 +192,86 @@ mostra o dispositivo virtual com ID `1168`, família `yc500` e layout ANSI sem
 cedilha, sem acessar hardware real. **Desconectar** encerra a demonstração e
 volta ao estado desconectado.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** app mostrou **CONECTADO (DEMO)**, selo
+**DEMO** e “Sessão de demonstração com um dispositivo virtual. Nenhum
+hardware real está conectado.”
 
-### Passo 10 — Encerrar o teste
+[Captura: modo demo](screenshots/foundation-demo.png)
+
+### Passo 11 — Encerrar o teste
 
 Clique em **Desconectar** (se houver sessão) e pare o servidor de
 desenvolvimento com `Ctrl+C`.
 
-**Esperado:** nenhuma escrita foi enviada ao teclado e nenhuma atualização de
-firmware foi iniciada. O terminal encerra sem erro.
+**Esperado:** nenhuma gravação de configuração foi enviada ao teclado e
+nenhuma atualização de firmware foi iniciada. O único tráfego HID é o feature
+report de identify. O terminal encerra sem erro.
 
-**Resultado:** ____________________________________________________________
+**Resultado — Execução 2026-11-12:** nenhuma gravação de configuração, keymap,
+RGB, macro, tela, perfil ou firmware foi enviada; nenhuma atualização de
+firmware ou erase de flash foi iniciada. O único tráfego HID foi o feature
+report de identify.
+
+## Capturas da execução (2026-11-12)
+
+### Dashboard conectado
+
+![Dashboard com Attack Shark K86 (1168) conectado em modo somente leitura](screenshots/foundation-connected.png)
+
+Estado **CONECTADO**, nome `Attack Shark K86 (1168)`, ID `1168`, família
+`yc500`, layout `ANSI, sem cedilha` e selo **SOMENTE LEITURA**.
+
+### Modo demo
+
+![Dashboard em modo demo com o selo DEMO](screenshots/foundation-demo.png)
+
+Estado **CONECTADO (DEMO)**, com o selo **DEMO** e a mensagem de que nenhum
+hardware real está conectado.
+
+### Dashboard desconectado
+
+![Dashboard sem dispositivo conectado, mostrando o cartão de referência](screenshots/foundation-disconnected.png)
+
+Estado **DESCONECTADO**, com o cartão de referência do alvo e sem dados ao
+vivo do dispositivo.
 
 ## Registro final
 
 ```text
-Data da execução:
-Responsável:
-Navegador e versão:
-Sistema operacional:
-Commit do K86 Studio:
-Dispositivo observado (VID:PID / ID interno):
-Resultado geral: [ ] PASSOU   [ ] FALHOU
-Observações:
+Data da execução: 2026-11-12
+Responsável: controlador
+Navegador e versão: Microsoft Edge 157.0.4341.46
+Sistema operacional: Windows 11
+App: http://127.0.0.1:5173
+Commit do K86 Studio: código do app em 6600230; documentação neste registro de hardware
+Dispositivo observado: USB\VID_3151&PID_4015; ID interno 1168; MI_02; "Gaming Keyboard"
+Resultado geral: [x] PASSOU   [ ] FALHOU
+Observações: identify 0x8F em report ID 0; reply 8F 90 04 00 00; ID 1168;
+checksum 0x70 aceito; família yc500; ANSI sem cedilha; somente leitura;
+disconnect/reconnect/demo observados; remoção física do cabo não registrada
+separadamente. Nenhuma gravação de configuração, keymap, RGB, macro, tela,
+perfil ou firmware; nenhuma atualização de firmware ou erase de flash.
+Screenshots: docs/qa/screenshots/foundation-connected.png,
+docs/qa/screenshots/foundation-demo.png,
+docs/qa/screenshots/foundation-disconnected.png.
 ```
 
 ## Avisos de segurança desta fase
 
-- **Writes não estão habilitados.** O app não expõe keymap, RGB, macros, tela,
-  perfis, configurações ou reset.
+- **Gravação de configuração não está habilitada.** O app não expõe keymap,
+  RGB, macros, tela, perfis, configurações ou reset. O único tráfego HID é o
+  feature report de identify.
 - **Nenhuma atualização de firmware é realizada.** Não há OTA, bootloader ou
   gravação de flash nesta fase.
-- **Não é necessário backup**, porque o teste é somente leitura. Se o app
-  exibir qualquer ação de escrita, pare o teste e reporte.
+- **Não é necessário backup**, porque o teste é somente leitura e não grava
+  configuração. Se o app exibir qualquer ação de gravação de configuração,
+  pare o teste e reporte.
 - Se o ID interno não for `1168`, a sessão deve permanecer somente leitura.
   Registre o resultado; não tente contornar a proteção.
 - O driver oficial deve ficar fechado durante o teste. Não execute o app do
   fornecedor em paralelo.
+- A validação cobre apenas a unidade `3151:4015`/`1168` no Edge
+  157.0.4341.46. As revisões `2730` e `4094` não foram testadas.
 
 ## Solução de problemas
 
@@ -209,8 +293,9 @@ indisponível, use o modo demo e registre o bloqueio.
 
 **Causa:** o usuário fechou o seletor ou não escolheu nenhum dispositivo.
 
-**Ação:** clique em **Conectar teclado** novamente e escolha `3151:4015`. O app
-deve permanecer no estado desconectado, sem sessão parcial.
+**Ação:** clique em **Conectar teclado** novamente e escolha `3151:4015`
+(“Gaming Keyboard”). O app deve permanecer no estado desconectado, sem sessão
+parcial.
 
 ### Dispositivo não aparece no seletor
 
@@ -230,9 +315,10 @@ pode não conseguir identificar a interface vendor-defined; registre o caso.
 
 **Causa:** foi escolhida uma interface/coleção que não é a vendor-defined.
 
-**Ação:** repita a conexão e escolha a interface correta. A coleção de fallback
-serve apenas para identify somente leitura; não habilite writes. Se o erro
-persistir, registre o nome, VID/PID e as coleções exibidas pelo dispositivo.
+**Ação:** repita a conexão e escolha a interface “Gaming Keyboard” /
+vendor-defined. A coleção de fallback serve apenas para identify somente
+leitura; não habilite gravações de configuração. Se o erro persistir, registre
+o nome, VID/PID e as coleções exibidas pelo dispositivo.
 
 ### Identify falha ou retorna ID desconhecido
 
@@ -241,7 +327,7 @@ reconhecido”, com ID diferente de `1168`.
 
 **Ação:** registre a mensagem exata, o ID interno retornado, o VID/PID e os
 erros do console. A sessão deve permanecer somente leitura. Não tente enviar
-comandos de escrita nem alterar o código durante a validação.
+comandos de gravação de configuração nem alterar o código durante a validação.
 
 ### Erro de feature report ou report ID
 
@@ -249,7 +335,8 @@ comandos de escrita nem alterar o código durante a validação.
 
 **Contexto:** o Windows declara `FeatureReportByteLength = 65` para a coleção
 vendor-defined, compatível com 64 bytes de payload mais o byte de report ID.
-O contrato documentado usa report ID `0`.
+Na execução de 2026-11-12, o report ID `0` funcionou no Edge 157.0.4341.46.
+Outras combinações de navegador/firmware não foram testadas.
 
 **Ação:** registre a mensagem exata do navegador e o resultado do passo 5/6.
 Não adivinhe outro report ID e não altere o protocolo durante o teste; pare e
@@ -262,7 +349,8 @@ reporte para análise.
 
 **Ação:** aguarde alguns segundos; remova e reconecte o cabo; recarregue a
 página se necessário. Registre se o estado voltou sozinho e qualquer erro do
-console. Não envie writes enquanto o estado estiver inconsistente.
+console. Não envie gravações de configuração enquanto o estado estiver
+inconsistente.
 
 ### Erro ao iniciar o servidor de desenvolvimento
 
@@ -272,3 +360,34 @@ console. Não envie writes enquanto o estado estiver inconsistente.
 `npm.cmd` (não `npm.ps1`). Se a porta `5173` estiver ocupada, use
 `npm.cmd run dev -- --port 5174` e abra a URL indicada. Registre a mensagem de
 erro se o problema persistir.
+
+## Template de reexecução (em branco)
+
+Copie esta tabela para uma nova execução. Não substitua os resultados de
+2026-11-12 no corpo principal sem registrar a nova data.
+
+| Passo | Resultado da reexecução |
+| --- | --- |
+| Pré-condições e enumeração | |
+| 1. Instalar dependências | |
+| 2. Iniciar dev server | |
+| 3. Abrir o app no Chrome/Edge | |
+| 4. Conectar o K86 por cabo USB | |
+| 5. Escolher `3151:4015` no chooser | |
+| 6. Conferir ID, família, layout e somente leitura | |
+| 7. Desconectar pelo botão | |
+| 8. Reconectar | |
+| 9. Remoção física do cabo | |
+| 10. Modo demo | |
+| 11. Encerrar o teste | |
+
+```text
+Data da reexecução:
+Responsável:
+Navegador e versão:
+Sistema operacional:
+Commit do K86 Studio:
+Dispositivo observado (VID:PID / ID interno):
+Resultado geral: [ ] PASSOU   [ ] FALHOU
+Observações:
+```
