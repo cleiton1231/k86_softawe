@@ -10,6 +10,13 @@ export function checksum(bytes: Uint8Array, mode: ChecksumMode): number {
 
 export function applyChecksum(bytes: Uint8Array, mode: ChecksumMode): Uint8Array {
   if (mode === "none") return bytes;
-  bytes[mode === "bit7" ? 7 : 8] = checksum(bytes, mode);
+  const index = mode === "bit7" ? 7 : 8;
+  const required = index + 1;
+  if (bytes.length < required) {
+    throw new Error(
+      `applyChecksum: buffer too short for ${mode} (need at least ${required} bytes, got ${bytes.length})`,
+    );
+  }
+  bytes[index] = checksum(bytes, mode);
   return bytes;
 }
