@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FakeTransport } from "../hid/fake";
 import { K86Session, UnsupportedDeviceError } from "./k86-session";
+
+function identifyReply(deviceId: number): Uint8Array {
+  const reply = new Uint8Array(64);
+  reply[0] = 0x8f;
+  reply[1] = deviceId & 0xff;
+  reply[2] = (deviceId >> 8) & 0xff;
+  reply[3] = (deviceId >> 16) & 0xff;
+  reply[4] = (deviceId >> 24) & 0xff;
+  return reply;
+}
 
 describe("K86Session", () => {
   it("identifies a known K86", async () => {
@@ -43,6 +53,13 @@ describe("K86Session", () => {
       profiles: 3,
     });
   });
+  it("keeps an unknown device with a different pid read-only", async () => {
+    const session = await K86Session.open(FakeTransport.withIdentify(9999, 0x1234));
+    expect(session.readOnly).toBe(true);
+    expect(session.definition.family).toBe("yc500");
+    expect(session.definition.vid).toBe(0x3151);
+    expect(session.definition.pid).toBe(0x1234);
+  });
   it("rejects a known id whose transport pid does not match", async () => {
     const t = FakeTransport.withIdentify(1168, 0x5002);
     await expect(K86Session.open(t)).rejects.toBeInstanceOf(UnsupportedDeviceError);
@@ -51,22 +68,38 @@ describe("K86Session", () => {
     const t = FakeTransport.withIdentify(1168, 0x5002);
     await expect(K86Session.open(t)).rejects.toThrow(/0x4015.*0x5002/i);
   });
+  it("rejects a known id whose transport vid does not match", async () => {
+    const t = new FakeTransport(
+      { vendorId: 0x1234, productId: 0x4015 },
+      identifyReply(1168),
+    );
+    const error = await K86Session.open(t).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(UnsupportedDeviceError);
+    expect((error as Error).message).toMatch(/0x3151.*0x1234/i);
+  });
   it("rejects an invalid identify opcode", async () => {
     const t = FakeTransport.withIdentify(1168, 0x4015);
     t.receiveFeatureReport = async () => new Uint8Array(64);
     await expect(K86Session.open(t)).rejects.toThrow(/opcode/i);
   });
-  it("sends the identify packet on report 0", async () => {
+  it("uses report 0 for the identify exchange", async () => {
     const t = FakeTransport.withIdentify(1168, 0x4015);
     const sent: Array<{ reportId: number; data: Uint8Array }> = [];
+    const received: number[] = [];
+    const originalReceive = t.receiveFeatureReport.bind(t);
     t.sendFeatureReport = async (reportId, data) => {
       sent.push({ reportId, data: data.slice() });
+    };
+    t.receiveFeatureReport = async (reportId) => {
+      received.push(reportId);
+      return originalReceive(reportId);
     };
     await K86Session.open(t);
     expect(sent).toHaveLength(1);
     expect(sent[0].reportId).toBe(0);
     expect(sent[0].data).toHaveLength(64);
     expect(sent[0].data[0]).toBe(0x8f);
+    expect(received).toEqual([0]);
   });
   it("closes the transport", async () => {
     const t = FakeTransport.withIdentify(1168, 0x4015);
@@ -80,6 +113,30 @@ describe("K86Session", () => {
     await session.close();
     expect(closes).toBe(1);
   });
+  it("does not close the transport on a successful open", async () => {
+    const t = FakeTransport.withIdentify(1168, 0x4015);
+    let closes = 0;
+    const originalClose = t.close.bind(t);
+    t.close = async () => {
+      closes += 1;
+      await originalClose();
+    };
+    const session = await K86Session.open(t);
+    expect(closes).toBe(0);
+    await session.close();
+    expect(closes).toBe(1);
+  });
+  it("closes the transport when the pid does not match", async () => {
+    const t = FakeTransport.withIdentify(1168, 0x5002);
+    let closes = 0;
+    const originalClose = t.close.bind(t);
+    t.close = async () => {
+      closes += 1;
+      await originalClose();
+    };
+    await expect(K86Session.open(t)).rejects.toBeInstanceOf(UnsupportedDeviceError);
+    expect(closes).toBe(1);
+  });
   it("closes the transport when opening fails", async () => {
     const t = FakeTransport.withIdentify(1168, 0x4015);
     let closes = 0;
@@ -91,5 +148,22 @@ describe("K86Session", () => {
     };
     await expect(K86Session.open(t)).rejects.toThrow(/short/i);
     expect(closes).toBe(1);
+  });
+  it("keeps the identify error when closing the transport also fails", async () => {
+    const t = FakeTransport.withIdentify(1168, 0x4015);
+    t.receiveFeatureReport = async () => new Uint8Array([0x8f]);
+    t.close = async () => {
+      throw new Error("close failed");
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await expect(K86Session.open(t)).rejects.toThrow(/short/i);
+      expect(warn).toHaveBeenCalledWith(
+        "K86Session: falha ao fechar o transporte após erro de identificação.",
+        expect.any(Error),
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

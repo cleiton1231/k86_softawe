@@ -12,7 +12,7 @@ export class UnsupportedDeviceError extends Error {
   }
 }
 
-function hexPid(value: number): string {
+function hexWord(value: number): string {
   return `0x${value.toString(16).padStart(4, "0")}`;
 }
 
@@ -52,6 +52,13 @@ export class K86Session {
     this.readOnly = readOnly;
   }
 
+  /**
+   * Identifies the device and takes ownership of the transport.
+   *
+   * If identification fails, the transport is closed before the original
+   * error is rethrown; the caller must not reuse it. On success the caller
+   * owns the returned session and must call `close()` when done.
+   */
   static async open(transport: HidTransport): Promise<K86Session> {
     try {
       await transport.sendFeatureReport(REPORT_ID, identifyPacket());
@@ -62,7 +69,12 @@ export class K86Session {
       if (known) {
         if (known.pid !== transport.info.productId) {
           throw new UnsupportedDeviceError(
-            `Dispositivo não suportado: o ID ${deviceId} (${known.name}) espera PID ${hexPid(known.pid)}, mas o dispositivo reportou PID ${hexPid(transport.info.productId)}.`,
+            `Dispositivo não suportado: ${known.name} espera PID ${hexWord(known.pid)}, mas o dispositivo reportou PID ${hexWord(transport.info.productId)}.`,
+          );
+        }
+        if (known.vid !== transport.info.vendorId) {
+          throw new UnsupportedDeviceError(
+            `Dispositivo não suportado: ${known.name} espera VID ${hexWord(known.vid)}, mas o dispositivo reportou VID ${hexWord(transport.info.vendorId)}.`,
           );
         }
         return new K86Session(transport, known, false);
