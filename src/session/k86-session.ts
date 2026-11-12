@@ -2,14 +2,51 @@ import { findDeviceById } from "../devices/k86";
 import type { DeviceDefinition } from "../devices/types";
 import type { HidTransport } from "../hid/transport";
 import { decodeIdentify, identifyPacket } from "../protocol/identify";
+import {
+  SCREEN_HEIGHT,
+  SCREEN_WIDTH,
+  encodeScreenPixels,
+  maxScreenFrames,
+  screenAnnouncePacket,
+  screenPagePackets,
+} from "../protocol/screen";
+import type { ScreenAnimation } from "../screen/decode";
 
 const REPORT_ID = 0;
+const SCREEN_ACK_ATTEMPTS = 10;
 
 export class UnsupportedDeviceError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "UnsupportedDeviceError";
   }
+}
+
+export class ScreenAckError extends Error {
+  constructor(message = "a tela do teclado não confirmou o início da transferência") {
+    super(message);
+    this.name = "ScreenAckError";
+  }
+}
+
+export interface ScreenTransferOptions {
+  slot: number;
+  onProgress?: (done: number, total: number) => void;
+  signal?: AbortSignal;
+  /** Test hook: page pacing in ms. The vendor uses 2 ms. */
+  pageDelayMs?: number;
+  /** Test hook: delay between announce polls in ms. The vendor uses 100 ms. */
+  ackDelayMs?: number;
+}
+
+function abortError(): Error {
+  const error = new Error("transferência cancelada");
+  error.name = "AbortError";
+  return error;
+}
+
+function sleep(ms: number): Promise<void> {
+  return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
 }
 
 const WRITE_CAPABLE_DEVICE_IDS = new Set([1168]);
@@ -115,6 +152,105 @@ export class K86Session {
     } catch (error) {
       await closeAfterFailedOpen(transport);
       throw error;
+    }
+  }
+
+  async sendFeatureReport(data: Uint8Array): Promise<void> {
+    await this.transport.sendFeatureReport(REPORT_ID, data);
+  }
+
+  async receiveFeatureReport(): Promise<Uint8Array> {
+    return this.transport.receiveFeatureReport(REPORT_ID);
+  }
+
+  /**
+   * Writes a still image or an animation to one of the five screen slots.
+   *
+   * The announce is retried until the display answers `reply[1] === 1`.
+   * Data pages are only sent after that acknowledgement. The method does not
+   * erase the screen flash; it overwrites the chosen slot.
+   */
+  async sendScreenAnimation(
+    animation: ScreenAnimation,
+    options: ScreenTransferOptions,
+  ): Promise<void> {
+    if (!this.writesAllowed) {
+      throw new Error(
+        "Este dispositivo está em modo somente leitura; gravação na tela não está habilitada.",
+      );
+    }
+    if (
+      !Number.isInteger(options.slot) ||
+      options.slot < 0 ||
+      options.slot >= this.definition.screen.slots
+    ) {
+      throw new Error(
+        `slot inválido: ${options.slot}; use 0..${this.definition.screen.slots - 1}`,
+      );
+    }
+    if (animation.width !== SCREEN_WIDTH || animation.height !== SCREEN_HEIGHT) {
+      throw new Error(
+        `a tela espera ${SCREEN_WIDTH}x${SCREEN_HEIGHT}, recebeu ${animation.width}x${animation.height}`,
+      );
+    }
+    if (animation.frames.length === 0) {
+      throw new Error("a animação não contém frames");
+    }
+    const limit = maxScreenFrames();
+    if (animation.frames.length > limit) {
+      throw new Error(
+        `a animação tem ${animation.frames.length} frames; o limite desta tela é ${limit}`,
+      );
+    }
+
+    const frameData = animation.frames.map((frame) =>
+      encodeScreenPixels(frame, SCREEN_WIDTH, SCREEN_HEIGHT),
+    );
+    const frameCount = frameData.length;
+    const delayMs = Math.max(0, Math.min(255, Math.round(animation.delayMs)));
+    const slot = options.slot;
+    const pageDelayMs = options.pageDelayMs ?? 2;
+    const ackDelayMs = options.ackDelayMs ?? 100;
+    const signal = options.signal;
+
+    if (signal?.aborted) throw abortError();
+
+    const announce = screenAnnouncePacket({
+      frame: 0,
+      frameCount,
+      delayMs,
+      length: frameData[0].length,
+      bbox: { left: 0, top: 0, right: SCREEN_WIDTH, bottom: SCREEN_HEIGHT },
+      slot,
+    });
+
+    let acknowledged = false;
+    for (let attempt = 0; attempt < SCREEN_ACK_ATTEMPTS; attempt++) {
+      if (signal?.aborted) throw abortError();
+      await this.sendFeatureReport(announce);
+      const reply = await this.receiveFeatureReport();
+      if (reply.length > 1 && reply[1] === 1) {
+        acknowledged = true;
+        break;
+      }
+      await sleep(ackDelayMs);
+    }
+    if (!acknowledged) throw new ScreenAckError();
+
+    for (let frame = 0; frame < frameCount; frame++) {
+      if (signal?.aborted) throw abortError();
+      const pages = screenPagePackets({
+        frame,
+        frameCount,
+        delayMs,
+        data: frameData[frame],
+      });
+      for (const page of pages) {
+        if (signal?.aborted) throw abortError();
+        await this.sendFeatureReport(page);
+        await sleep(pageDelayMs);
+      }
+      options.onProgress?.(frame + 1, frameCount);
     }
   }
 
