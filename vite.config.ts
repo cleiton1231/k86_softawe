@@ -7,8 +7,22 @@ export default defineConfig({
   plugins: [react(), {
     name: "k86-csp",
     apply: "build",
-    transformIndexHtml(html) {
-      return html.replace("</head>", `<meta http-equiv="Content-Security-Policy" content="${csp}"></head>`);
+    transformIndexHtml() {
+      return [
+        {
+          tag: "meta",
+          attrs: {
+            "http-equiv": "Content-Security-Policy",
+            content: csp,
+          },
+          injectTo: "head-prepend",
+        },
+      ];
     },
   }],
+  build: {
+    modulePreload: {
+      polyfill: false,
+    },
+  },
 });

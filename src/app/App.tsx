@@ -18,38 +18,42 @@ export default function App() {
           <p className="eyebrow">Fundação</p>
           <h2 id="hero-title">Configurador independente para o Attack Shark K86</h2>
           <p className="lede">
-            Uma ferramenta para o seu teclado, feita para rodar no navegador e
-            conversar com o dispositivo conectado por USB. Sem conta, sem nuvem
-            e sem enviar dados para lugar nenhum.
+            Uma ferramenta para o seu teclado, feita para rodar no navegador e,
+            nas próximas etapas, se conectar ao dispositivo por USB. Sem conta,
+            sem nuvem e sem enviar dados para lugar nenhum.
           </p>
         </section>
 
         <section className="principles" aria-label="Princípios do projeto">
           <article className="principle-card">
             <h3>Local-first</h3>
-            <p>Configurações e preferências ficam neste navegador.</p>
+            <p>Planejado: as configurações e preferências ficarão neste navegador.</p>
           </article>
           <article className="principle-card">
             <h3>Sem telemetria</h3>
-            <p>Nenhum evento, métrica ou identificador sai do app.</p>
+            <p>O app não coleta eventos, métricas ou identificadores.</p>
           </article>
           <article className="principle-card">
             <h3>Leitura segura</h3>
-            <p>Esta fase identifica o teclado sem enviar writes ao hardware.</p>
+            <p>
+              Planejado: identificar o teclado em modo somente leitura, sem
+              gravar no hardware.
+            </p>
           </article>
         </section>
 
         <section className="next-step" aria-labelledby="next-title">
           <h2 id="next-title">Próximo passo</h2>
           <p>
-            A fundação está pronta: React, TypeScript, Vite e o ambiente de
-            testes. A conexão com o K86 será adicionada nas próximas etapas.
+            Esta fundação reúne React, TypeScript, Vite e o ambiente de testes.
+            A conexão somente leitura com o K86 e a persistência local entram
+            nas próximas etapas.
           </p>
         </section>
       </main>
 
       <footer className="app-footer">
-        <p>K86 Studio 0.1.0</p>
+        <p>K86 Studio</p>
         <p>GPL-3.0-or-later</p>
       </footer>
     </div>

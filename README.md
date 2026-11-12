@@ -21,7 +21,7 @@ npm.cmd run build     # checa os tipos e gera o build de produção
 npm.cmd run preview   # serve o build de produção localmente
 npm.cmd run test      # roda os testes em modo watch
 npm.cmd run test:run  # roda os testes uma vez
-npm.cmd run typecheck # checa os tipos sem gerar arquivos
+npm.cmd run typecheck # checa os tipos sem gerar o bundle de produção
 ```
 
 No Windows, use `npm.cmd`; o PowerShell bloqueia `npm.ps1`.
