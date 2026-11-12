@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { DeviceProvider } from "../hid/device-context";
 import Dashboard from "../pages/Dashboard";
 import PlaceholderPage from "../pages/PlaceholderPage";
+import ScreenPage from "../pages/Screen";
 import { routes, type RouteId } from "./routes";
 
 export default function App() {
@@ -61,7 +62,7 @@ export default function App() {
           </nav>
 
           <div className="sidebar-meta">
-            <p>Fase 1 · fundação</p>
+            <p>Fase 2 · tela</p>
             <p>GPL-3.0-or-later</p>
           </div>
         </aside>
@@ -75,6 +76,8 @@ export default function App() {
           >
             {activeRoute.id === "dashboard" ? (
               <Dashboard />
+            ) : activeRoute.id === "screen" ? (
+              <ScreenPage onNavigate={setRouteId} />
             ) : (
               <PlaceholderPage
                 title={activeRoute.label}

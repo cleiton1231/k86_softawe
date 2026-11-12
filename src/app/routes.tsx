@@ -21,7 +21,7 @@ export const routes = [
     id: "screen",
     label: "Screen",
     description:
-      "Configuração da tela do teclado e dos elementos exibidos nela.",
+      "Envie imagens e GIFs para a tela 240x135, com preview, frames e delay.",
   },
   {
     id: "macros",
