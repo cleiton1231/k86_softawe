@@ -22,7 +22,7 @@
 - [x] Dependências instaladas (`electron`, `node-hid`).
 - [x] Build de produção gerado (`npm.cmd run build`).
 - [x] Electron aberto com `electron . --remote-debugging-port=9223` para o teste
-      automatizado.
+      automatizado. O CDP é um recurso de QA; o app normal não abre essa porta.
 
 ## Matriz de testes
 
@@ -118,6 +118,12 @@ frames do `giphy.gif`, com delay de 100 ms e ~6,9 MB. Este é o limite calculado
 pelo orçamento de memória da tela; a confirmação visual da animação fica
 pendente até a próxima sessão do usuário.
 
+> **Nota:** o envio de 106 frames foi feito no commit `1570243`, antes das
+> mudanças de segurança/performance. As alterações posteriores não mudam o
+> protocolo no fio; o caminho `screen:send` foi validado por testes unitários e
+> pela revisão, mas não foi reenviado ao hardware para preservar o GIF final no
+> slot 5 e evitar novas janelas durante o uso do usuário.
+
 ### 7. Desconectar e reconectar
 
 **Esperado:** a animação permanece na flash da tela após desconectar/reconectar
@@ -193,7 +199,7 @@ Data da execução: 2026-11-12
 Responsável: controlador
 Sistema operacional: Windows 11
 App: K86 Studio (Electron 45.3.1, node-hid 3.4.0)
-Commit do K86 Studio: preencher no commit final
+Commit do K86 Studio: 1570243 (envio de 106 frames)
 Dispositivo observado: USB\VID_3151&PID_4015; ID interno 1168; MI_02
 Resultado geral: [x] PASSOU   [ ] FALHOU
 Observações: PNG estático, GIF de 3 frames, trecho de 12 frames e GIF

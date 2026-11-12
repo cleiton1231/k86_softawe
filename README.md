@@ -127,6 +127,7 @@ npm.cmd run typecheck # checa os tipos sem gerar o bundle
 npm.cmd run test      # roda os testes em modo watch
 npm.cmd run test:run  # roda os testes uma vez
 npm.cmd run build     # checa os tipos e gera o build de produção com CSP
+npm.cmd run check:build # valida CSP e assets relativos no build
 npm.cmd run preview   # serve o build de produção localmente
 ```
 
@@ -152,6 +153,7 @@ tests/
 docs/
   analysis/     notas de protocolo e evidências
   qa/           checklists de hardware e capturas da validação
+  reviews/      revisões independentes de segurança e performance
   superpowers/  design e planos
 ```
 
@@ -164,16 +166,25 @@ Documentação principal:
 - [Protocolo da tela](docs/analysis/protocol-k86-screen.md)
 - [Checklist de hardware — fundação](docs/qa/hardware-checklist.md)
 - [Checklist de hardware — tela](docs/qa/screen-hardware.md)
+- [Revisão de segurança](docs/reviews/2026-11-12-security-review.md)
+- [Revisão de performance](docs/reviews/2026-11-12-performance-review.md)
+- [Avisos de terceiros](THIRD_PARTY_NOTICES.md)
 
 ## Privacidade e escopo
 
 - Nenhum `fetch`, `XMLHttpRequest`, `WebSocket` ou `sendBeacon` no código do
   renderer. O único WebSocket é o HMR do Vite em desenvolvimento.
 - Nenhuma fonte, ícone ou script remoto.
-- O build de produção injeta uma CSP que bloqueia conexões de rede.
+- O build de produção injeta uma CSP que bloqueia conexões de rede, formulários,
+  objetos, frames e workers; `check:build` confere o artefato.
+- A janela do Electron só navega para `dist/` (ou para o dev server em
+  desenvolvimento) e nega popups, webviews e permissões do Chromium.
+- O IPC do HID valida remetente, tamanho e opcode; a tela tem teto de pacotes.
 - Nenhum dado de uso é coletado; não há conta, analytics ou telemetria.
 - O processo principal do Electron não faz requisições de rede; o único acesso
   externo é o HID local do teclado.
+- O `fetch` externo, a navegação para arquivo fora de `dist/` e permissões de
+  notificação foram testados no build de produção e bloqueados.
 - A gravação de tela está habilitada para o ID `1168` validado em hardware.
   Keymap, RGB, macros, perfis, firmware e reset continuam fora do escopo.
 - Nenhuma atualização de firmware ou erase de flash é realizada.
