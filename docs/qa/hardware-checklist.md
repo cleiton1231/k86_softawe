@@ -143,9 +143,11 @@ configuração.
 **Resultado — Execução 2026-11-12:** app mostrou **CONECTADO**,
 “Attack Shark K86 (1168) identificado com sucesso”; NOME
 `Attack Shark K86 (1168)`, ID INTERNO `1168`, FAMÍLIA `yc500`, LAYOUT
-`ANSI, sem cedilha`, selo **SOMENTE LEITURA**. O round-trip de identify
-devolveu `8F 90 04 00 00` e decodificou o ID `1168`. A única operação HID foi
-o feature report de identify, com report ID `0` e checksum `0x70` no byte 7.
+`ANSI, sem cedilha`, selo **SOMENTE LEITURA**. O app decodificou a resposta
+como ID `1168`; o decoder exige byte 0 = `0x8F` e bytes 1..4 =
+`90 04 00 00`. Os bytes brutos não foram logados separadamente nesta
+execução. A única operação HID foi o feature report de identify, com report
+ID `0` e checksum `0x70` no byte 7.
 
 [Captura: dashboard conectado](screenshots/foundation-connected.png)
 
@@ -246,11 +248,13 @@ App: http://127.0.0.1:5173
 Commit do K86 Studio: código do app em 6600230; documentação neste registro de hardware
 Dispositivo observado: USB\VID_3151&PID_4015; ID interno 1168; MI_02; "Gaming Keyboard"
 Resultado geral: [x] PASSOU   [ ] FALHOU
-Observações: identify 0x8F em report ID 0; reply 8F 90 04 00 00; ID 1168;
-checksum 0x70 aceito; família yc500; ANSI sem cedilha; somente leitura;
-disconnect/reconnect/demo observados; remoção física do cabo não registrada
-separadamente. Nenhuma gravação de configuração, keymap, RGB, macro, tela,
-perfil ou firmware; nenhuma atualização de firmware ou erase de flash.
+Observações: identify 0x8F em report ID 0; o app decodificou a resposta como
+ID 1168; o decoder exige byte 0 = 0x8F e bytes 1..4 = 90 04 00 00; os bytes
+brutos não foram logados separadamente; checksum 0x70 aceito; família yc500;
+ANSI sem cedilha; somente leitura; disconnect/reconnect/demo observados;
+remoção física do cabo não registrada separadamente. Nenhuma gravação de
+configuração, keymap, RGB, macro, tela, perfil ou firmware; nenhuma
+atualização de firmware ou erase de flash.
 Screenshots: docs/qa/screenshots/foundation-connected.png,
 docs/qa/screenshots/foundation-demo.png,
 docs/qa/screenshots/foundation-disconnected.png.

@@ -41,7 +41,7 @@ compara ID, VID e PID antes de liberar operações.
 
 | ID interno | PID | Família | Layout no registro | Evidência |
 | --- | --- | --- | --- | --- |
-| `1168` (`0x0490`) | `0x4015` | `yc500` | ANSI sem cedilha | **observado** no design §7, no plano (restrições globais) e em `src/devices/k86.ts`; a enumeração do Windows confirmou `VID_3151&PID_4015`; o identify WebHID de 2026-11-12 devolveu `1168` nesta unidade |
+| `1168` (`0x0490`) | `0x4015` | `yc500` | ANSI sem cedilha | **observado** no design §7, no plano (restrições globais) e em `src/devices/k86.ts`; a enumeração do Windows confirmou `VID_3151&PID_4015`; o app decodificou o ID `1168` no identify WebHID de 2026-11-12 |
 | `2730` (`0x0AAA`) | `0x5002` | `gen2` | ANSI declarado | **observado** no design §7 e no registro; esta revisão não foi testada nesta fase |
 | `4094` (`0x0FFE`) | `0x5056` | `gen2` | ANSI declarado | **observado** no design §7 e no registro; esta revisão não foi testada nesta fase |
 
@@ -118,16 +118,20 @@ Representação do pedido:
 
 | Offset | Valor | Significado | Evidência |
 | --- | --- | --- | --- |
-| 0 | `0x8F` | eco do opcode de identify | **observado** no design, no plano, na análise do app oficial e no round-trip de 2026-11-12 |
-| 1..4 | `u32` little-endian | ID interno do dispositivo | **observado** nesta unidade em 2026-11-12: a resposta decodificada foi `1168` |
+| 0 | `0x8F` | eco do opcode de identify | **observado indiretamente** em 2026-11-12: o app decodificou a resposta, o que exige byte 0 = `0x8F`. O byte bruto exato é **inferido** da forma exigida pelo decoder; não foi capturado diretamente |
+| 1..4 | `u32` little-endian | ID interno do dispositivo | **observado** via app em 2026-11-12: o ID decodificado foi `1168`. A sequência exata de bytes 1..4 (`90 04 00 00`) é **inferida** da forma exigida pelo decoder, não capturada diretamente; os bytes brutos não foram logados separadamente |
 | 5..63 | não interpretado | bytes adicionais/reservados | **desconhecido**; o decoder desta fase ignora tudo depois do byte 4 |
 
-Exemplo de ID `1168` (`0x00000490`) em little-endian, confirmado no
-round-trip:
+Forma necessária para o decoder produzir o ID `1168` (`0x00000490`) em
+little-endian; os bytes brutos não foram logados separadamente nesta
+execução:
 
 ```text
 8F 90 04 00 00 ...
 ```
+
+A decodificação bem-sucedida pelo app é a evidência de que a resposta
+satisfez essa forma; a captura bruta da resposta não foi registrada.
 
 O decoder atual:
 - rejeita respostas com menos de 5 bytes;
@@ -186,7 +190,7 @@ Execução registrada em **2026-11-12**:
 | Dispositivo | `USB\VID_3151&PID_4015`, interface vendor-defined `MI_02`, rótulo do chooser “Gaming Keyboard” |
 | Conexão | WebHID chooser usado; app chegou a **CONECTADO** |
 | Identidade | “Attack Shark K86 (1168) identificado com sucesso”; NOME `Attack Shark K86 (1168)`, ID interno `1168`, família `yc500`, layout `ANSI, sem cedilha`, selo **SOMENTE LEITURA** |
-| Identify | feature report `0x8F` enviado com report ID `0`; resposta com byte 0 `0x8F` e bytes 1..4 `90 04 00 00` (u32 LE `1168`) |
+| Identify | feature report `0x8F` enviado com report ID `0`; o app decodificou a resposta como ID `1168`. O decoder exige byte 0 = `0x8F` e bytes 1..4 = `90 04 00 00`. Os bytes brutos não foram logados separadamente nesta execução; a sequência exata é **inferida** da forma exigida pelo decoder, não capturada diretamente |
 | Checksum do pedido | byte 7 `0x70` aceito no round-trip; ver limitação na seção 3 |
 | Desconexão | app voltou a **DESCONECTADO** e ao cartão de referência, sem dados ao vivo |
 | Reconexão | segunda conexão real concluída; o chooser exibiu “Gaming Keyboard - Emparelhado” após a primeira permissão |
