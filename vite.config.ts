@@ -1,7 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-
-const csp = "default-src 'self'; connect-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'";
+import { CONTENT_SECURITY_POLICY } from "./src/security/csp";
 
 export default defineConfig({
   plugins: [react(), {
@@ -13,7 +12,7 @@ export default defineConfig({
           tag: "meta",
           attrs: {
             "http-equiv": "Content-Security-Policy",
-            content: csp,
+            content: CONTENT_SECURITY_POLICY,
           },
           injectTo: "head-prepend",
         },

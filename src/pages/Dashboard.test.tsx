@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeTransport } from "../hid/fake";
+import { DeviceProvider } from "../hid/device-context";
 import Dashboard from "./Dashboard";
 
 const webhid = vi.hoisted(() => ({
@@ -21,9 +22,17 @@ beforeEach(() => {
   webhid.openWebHidTransport.mockReset();
 });
 
+function renderDashboard() {
+  return render(
+    <DeviceProvider>
+      <Dashboard />
+    </DeviceProvider>,
+  );
+}
+
 describe("Dashboard", () => {
   it("starts disconnected with connection actions and reference data", () => {
-    render(<Dashboard />);
+    renderDashboard();
 
     expect(
       screen.getByRole("button", { name: "Conectar teclado" }),
@@ -40,10 +49,13 @@ describe("Dashboard", () => {
       screen.getByText("Somente leitura nesta fase"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Demo")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/webhid não está disponível neste navegador/i),
+    ).toBeInTheDocument();
   });
 
   it("labels a demo session as demo and disconnects", async () => {
-    render(<Dashboard />);
+    renderDashboard();
 
     fireEvent.click(screen.getByRole("button", { name: "Modo demo" }));
 
@@ -79,7 +91,7 @@ describe("Dashboard", () => {
       FakeTransport.withIdentify(1168, 0x4015),
     );
 
-    render(<Dashboard />);
+    renderDashboard();
 
     fireEvent.click(screen.getByRole("button", { name: "Conectar teclado" }));
 
@@ -97,7 +109,7 @@ describe("Dashboard", () => {
       FakeTransport.withIdentify(9999, 0x4015),
     );
 
-    render(<Dashboard />);
+    renderDashboard();
 
     fireEvent.click(screen.getByRole("button", { name: "Conectar teclado" }));
 
@@ -115,11 +127,33 @@ describe("Dashboard", () => {
     expect(screen.queryByText("Demo")).not.toBeInTheDocument();
   });
 
+  it("shows a recognized gen2 model without enabling writes", async () => {
+    webhid.supported = true;
+    webhid.requestK86Device.mockResolvedValue({});
+    webhid.openWebHidTransport.mockResolvedValue(
+      FakeTransport.withIdentify(2730, 0x5002),
+    );
+
+    renderDashboard();
+
+    fireEvent.click(screen.getByRole("button", { name: "Conectar teclado" }));
+
+    expect(
+      await screen.findByText("Attack Shark K86 (2730)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dispositivo conectado")).toBeInTheDocument();
+    expect(screen.queryByText("Modelo não reconhecido")).not.toBeInTheDocument();
+    expect(screen.getByText("gen2")).toBeInTheDocument();
+    expect(
+      screen.getByText("Somente leitura: gravação não validada"),
+    ).toBeInTheDocument();
+  });
+
   it("mentions the browser chooser only while a real selection is pending", async () => {
     webhid.supported = true;
     webhid.requestK86Device.mockReturnValue(new Promise(() => {}));
 
-    render(<Dashboard />);
+    renderDashboard();
 
     fireEvent.click(screen.getByRole("button", { name: "Conectar teclado" }));
 
@@ -129,7 +163,7 @@ describe("Dashboard", () => {
   });
 
   it("reports WebHID unavailability and still offers demo mode", async () => {
-    render(<Dashboard />);
+    renderDashboard();
 
     fireEvent.click(screen.getByRole("button", { name: "Conectar teclado" }));
 

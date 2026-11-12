@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import { decodeIdentify, identifyPacket } from "./identify";
 
 describe("identify", () => {
-  it("builds the 0x8F request", () => {
-    expect(identifyPacket()[0]).toBe(0x8f);
+  it("builds the exact 64-byte 0x8F request", () => {
+    const packet = identifyPacket();
+    expect(packet).toHaveLength(64);
+    expect(packet[0]).toBe(0x8f);
+    expect(packet[7]).toBe(0x70);
+    expect(Array.from(packet.slice(8))).toEqual(new Array(56).fill(0));
   });
   it("decodes 1168 as u32 LE", () => {
     const reply = new Uint8Array(64);

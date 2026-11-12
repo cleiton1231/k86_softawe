@@ -1,7 +1,6 @@
 :root {
   color-scheme: dark;
   --bg: #07090c;
-  --bg-raise: #0b0f15;
   --surface: #0d1219;
   --surface-raised: #111822;
   --surface-hover: #16202c;
@@ -479,6 +478,18 @@ a {
 .button-secondary:disabled {
   border-color: var(--border);
   color: var(--text-faint);
+}
+
+.webhid-notice {
+  margin: 0 0 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--accent);
+  border-radius: 0.5rem;
+  background: var(--accent-soft);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
 }
 
 .field-note {

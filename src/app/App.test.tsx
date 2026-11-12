@@ -32,6 +32,7 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Keys" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveFocus();
     expect(keysLink).toHaveAttribute("aria-current", "page");
     expect(
       screen.getByRole("link", { name: /dashboard/i }),
@@ -41,6 +42,29 @@ describe("App", () => {
 
     expect(
       screen.getByRole("heading", { level: 2, name: /about/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a demo connection while navigating away and back", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Modo demo" }));
+
+    expect(await screen.findByText("Conectado (demo)")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: /keys/i }));
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Keys" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Conectado (demo)")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: /dashboard/i }));
+
+    expect(await screen.findByText("Conectado (demo)")).toBeInTheDocument();
+    expect(screen.getByText("Attack Shark K86 (1168)")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Desconectar" }),
     ).toBeInTheDocument();
   });
 });

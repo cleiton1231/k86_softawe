@@ -150,8 +150,9 @@ O decoder atual:
 5. Procurar o ID em `K86_DEVICES`.
 6. Se o ID for conhecido, validar VID e PID; se não baterem, lançar
    `UnsupportedDeviceError` e fechar o transporte.
-7. Se o ID for desconhecido, criar a sessão com `readOnly: true` e a definição
-   conservadora. Nenhuma gravação de configuração/estado existe nessa sessão.
+7. Se o ID for desconhecido, criar a sessão com `recognized: false`,
+   `writesAllowed: false` (`readOnly: true`) e a definição conservadora.
+   Nenhuma gravação de configuração/estado existe nessa sessão.
 8. Fechar o transporte ao desconectar ou ao final da sessão.
 
 ## 4. Checksums
@@ -225,13 +226,15 @@ gravação de configuração/estado.
   - `src/devices/k86.ts`
   - `src/hid/webhid.ts`
   - `src/session/k86-session.ts`
-- **Análise estática do app oficial:** usada apenas como conferência factual
-  de opcode, identidade e checksum. Nenhum código, asset ou texto do app do
-  fornecedor foi copiado para este repositório, e o app oficial não foi
-  executado como parte desta tarefa.
-- **Documentação factual do sharkfin (GPL-3.0-or-later):** usada apenas como
-  referência cruzada, conforme previsto no design §15. Nenhum código do
-  sharkfin foi copiado.
+- **Análise estática do app oficial:** `C:\Users\vitor\AppData\Local\Temp\k86\app\resources\app`
+  (aplicativo Electron extraído, incluindo `iot_driver.exe`). Usada apenas
+  como conferência factual de opcode, identidade e checksum. Nenhum código,
+  asset ou texto do app do fornecedor foi copiado para este repositório, e o
+  app oficial não foi executado como parte desta tarefa.
+- **Documentação factual do sharkfin (GPL-3.0-or-later):**
+  `C:\Users\vitor\AppData\Local\Temp\k86\sharkfin\docs\PROTOCOL.md`. Usada
+  apenas como referência cruzada, conforme previsto no design §15. Nenhum
+  código do sharkfin foi copiado.
 - **Enumeração HID local (somente leitura):** em 2026-11-12, o Windows
   enumerou `VID_3151&PID_4015`, incluindo a interface `MI_02` com a coleção
   `usagePage 0xFFFF, usage 0x0002` e `FeatureReportByteLength = 65`. Isso

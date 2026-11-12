@@ -13,6 +13,51 @@ function identifyReply(deviceId: number): Uint8Array {
 }
 
 describe("K86Session", () => {
+  it.each([
+    {
+      id: 1168,
+      pid: 0x4015,
+      family: "yc500",
+      recognized: true,
+      writesAllowed: true,
+      readOnly: false,
+    },
+    {
+      id: 2730,
+      pid: 0x5002,
+      family: "gen2",
+      recognized: true,
+      writesAllowed: false,
+      readOnly: true,
+    },
+    {
+      id: 4094,
+      pid: 0x5056,
+      family: "gen2",
+      recognized: true,
+      writesAllowed: false,
+      readOnly: true,
+    },
+    {
+      id: 9999,
+      pid: 0x4015,
+      family: "yc500",
+      recognized: false,
+      writesAllowed: false,
+      readOnly: true,
+    },
+  ])(
+    "classifies device $id as recognized=$recognized, writesAllowed=$writesAllowed",
+    async ({ id, pid, family, recognized, writesAllowed, readOnly }) => {
+      const session = await K86Session.open(FakeTransport.withIdentify(id, pid));
+
+      expect(session.recognized).toBe(recognized);
+      expect(session.writesAllowed).toBe(writesAllowed);
+      expect(session.readOnly).toBe(readOnly);
+      expect(session.definition.family).toBe(family);
+    },
+  );
+
   it("identifies a known K86", async () => {
     const session = await K86Session.open(FakeTransport.withIdentify(1168, 0x4015));
     expect(session.definition.family).toBe("yc500");

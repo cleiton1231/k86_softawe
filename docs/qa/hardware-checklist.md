@@ -47,9 +47,9 @@ Get-PnpDevice -PresentOnly |
   Select-Object Status, Class, FriendlyName, InstanceId
 ```
 
-**Esperado:** dispositivos com status `OK`, incluindo o composite USB e as
-interfaces `MI_00`, `MI_01` e `MI_02`. A interface `MI_02` é a coleção
-vendor-defined usada pelo app.
+**Esperado:** dispositivos com status `OK`, incluindo o composite USB e a
+interface vendor-defined usada pelo app (reportada como `MI_02` nesta
+unidade).
 
 **Resultado — Execução 2026-11-12:** dispositivo `USB\VID_3151&PID_4015`
 presente, com a interface vendor-defined `MI_02`; o chooser do Edge mostrou

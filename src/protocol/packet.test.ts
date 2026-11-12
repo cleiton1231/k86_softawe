@@ -21,9 +21,36 @@ describe("buildPacket", () => {
     const p = buildPacket(0x8f, [], "none");
     expect(p[7]).toBe(0);
   });
+  it("accepts the maximum bit7 payload without overwriting it", () => {
+    const payload = [1, 2, 3, 4, 5, 6];
+    const p = buildPacket(0x8f, payload, "bit7");
+    expect(Array.from(p.slice(1, 7))).toEqual(payload);
+    expect(p[7]).toBe(0x5b);
+  });
+  it("rejects a bit7 payload that would overlap the checksum", () => {
+    expect(() => buildPacket(0x8f, new Uint8Array(7), "bit7")).toThrow(
+      "buildPacket: payload overlaps the bit7 checksum (max 6 bytes, got 7)",
+    );
+  });
+  it("accepts the maximum bit8 payload without overwriting it", () => {
+    const payload = [1, 2, 3, 4, 5, 6, 7];
+    const p = buildPacket(0x07, payload, "bit8");
+    expect(Array.from(p.slice(1, 8))).toEqual(payload);
+  });
+  it("rejects a bit8 payload that would overlap the checksum", () => {
+    expect(() => buildPacket(0x07, new Uint8Array(8), "bit8")).toThrow(
+      "buildPacket: payload overlaps the bit8 checksum (max 7 bytes, got 8)",
+    );
+  });
+  it("accepts the full body when there is no checksum", () => {
+    const payload = new Uint8Array(REPORT_LEN - 1).fill(0xaa);
+    const p = buildPacket(0x8f, payload, "none");
+    expect(p).toHaveLength(REPORT_LEN);
+    expect(Array.from(p.slice(1))).toEqual(Array.from(payload));
+  });
   it("throws when the payload exceeds the report body", () => {
-    expect(() => buildPacket(0x8f, new Uint8Array(REPORT_LEN))).toThrow(
-      "buildPacket: payload too long (max 63 bytes, got 64)",
+    expect(() => buildPacket(0x8f, new Uint8Array(REPORT_LEN), "none")).toThrow(
+      "buildPacket: payload overlaps the none checksum (max 63 bytes, got 64)",
     );
   });
 });

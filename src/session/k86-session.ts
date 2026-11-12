@@ -12,6 +12,8 @@ export class UnsupportedDeviceError extends Error {
   }
 }
 
+const WRITE_CAPABLE_DEVICE_IDS = new Set([1168]);
+
 function hexWord(value: number): string {
   return `0x${value.toString(16).padStart(4, "0")}`;
 }
@@ -31,12 +33,20 @@ async function closeAfterFailedOpen(transport: HidTransport): Promise<void> {
  * Read-only identification session for a K86 device.
  *
  * This phase exposes no read or write operations beyond identification.
- * Unknown device IDs still produce a session, but it is marked `readOnly`
- * and receives a conservative yc500 fallback definition.
+ * Unknown device IDs still produce a session, but it is marked
+ * `recognized: false` and receives a conservative yc500 fallback definition.
+ *
+ * `writesAllowed` is a hardware-validation policy, separate from model
+ * recognition: the yc500 `1168` may write in a later phase, while the gen2
+ * revisions `2730` and `4094` stay read-only until validated on hardware.
+ * `readOnly` is kept as the existing UI gate and is the inverse of
+ * `writesAllowed`.
  */
 export class K86Session {
   readonly definition: DeviceDefinition;
   readonly deviceId: number;
+  readonly recognized: boolean;
+  readonly writesAllowed: boolean;
   readonly readOnly: boolean;
 
   private readonly transport: HidTransport;
@@ -44,12 +54,15 @@ export class K86Session {
   private constructor(
     transport: HidTransport,
     definition: DeviceDefinition,
-    readOnly: boolean,
+    recognized: boolean,
+    writesAllowed: boolean,
   ) {
     this.transport = transport;
     this.definition = definition;
     this.deviceId = definition.id;
-    this.readOnly = readOnly;
+    this.recognized = recognized;
+    this.writesAllowed = writesAllowed;
+    this.readOnly = !writesAllowed;
   }
 
   /**
@@ -77,7 +90,12 @@ export class K86Session {
             `Dispositivo não suportado: ${known.name} espera VID ${hexWord(known.vid)}, mas o dispositivo reportou VID ${hexWord(transport.info.vendorId)}.`,
           );
         }
-        return new K86Session(transport, known, false);
+        return new K86Session(
+          transport,
+          known,
+          true,
+          WRITE_CAPABLE_DEVICE_IDS.has(known.id),
+        );
       }
 
       // Unknown revisions are only identified in this phase. The fallback
@@ -93,7 +111,7 @@ export class K86Session {
         screen: { width: 240, height: 135, slots: 5 },
         profiles: 3,
       };
-      return new K86Session(transport, fallback, true);
+      return new K86Session(transport, fallback, false, false);
     } catch (error) {
       await closeAfterFailedOpen(transport);
       throw error;

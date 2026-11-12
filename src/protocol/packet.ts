@@ -1,16 +1,22 @@
 import { applyChecksum, type ChecksumMode } from "./checksum";
 
 export const REPORT_LEN = 64;
-const MAX_PAYLOAD_LEN = REPORT_LEN - 1;
+
+function maxPayloadLength(mode: ChecksumMode): number {
+  if (mode === "none") return REPORT_LEN - 1;
+  const checksumIndex = mode === "bit7" ? 7 : 8;
+  return checksumIndex - 1;
+}
 
 export function buildPacket(
   opcode: number,
   payload: ArrayLike<number> = [],
   mode: ChecksumMode = "bit7",
 ): Uint8Array {
-  if (payload.length > MAX_PAYLOAD_LEN) {
+  const maxPayload = maxPayloadLength(mode);
+  if (payload.length > maxPayload) {
     throw new Error(
-      `buildPacket: payload too long (max ${MAX_PAYLOAD_LEN} bytes, got ${payload.length})`,
+      `buildPacket: payload overlaps the ${mode} checksum (max ${maxPayload} bytes, got ${payload.length})`,
     );
   }
   const buf = new Uint8Array(REPORT_LEN);

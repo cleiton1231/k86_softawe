@@ -1,6 +1,7 @@
 import { routes } from "../app/routes";
 import type { PhysicalLayout } from "../devices/types";
-import { useDevice } from "../hid/use-device";
+import { useDeviceContext } from "../hid/device-context";
+import { isWebHidSupported } from "../hid/webhid";
 
 const features = routes.filter((route) => route.id !== "dashboard");
 
@@ -18,10 +19,11 @@ const statusLabels = {
 } as const;
 
 export default function Dashboard() {
-  const { state, connect, connectDemo, disconnect } = useDevice();
+  const { state, connect, connectDemo, disconnect } = useDeviceContext();
   const session = state.status === "connected" ? state.session : undefined;
   const busy = state.status === "connecting";
   const isDemo = state.source === "demo";
+  const webHidSupported = isWebHidSupported();
   const statusText =
     state.status === "connected" && isDemo
       ? "Conectado (demo)"
@@ -68,17 +70,27 @@ export default function Dashboard() {
                 : "Conectar teclado"}
           </h3>
 
+          {!webHidSupported && !session ? (
+            <p className="webhid-notice" role="note">
+              WebHID não está disponível neste navegador. Use Chrome ou Edge
+              atualizado para conectar o teclado real; o modo demo funciona
+              sem WebHID e sem hardware.
+            </p>
+          ) : null}
+
           {state.status === "error" && state.error ? (
             <p className="card-copy" role="alert">
               {state.error}
             </p>
           ) : session ? (
             <p className="card-copy">
-              {session.readOnly
+              {!session.recognized
                 ? "O ID interno deste dispositivo não corresponde a um modelo conhecido. A sessão usa uma definição conservadora e permanece somente leitura."
                 : isDemo
                   ? "Sessão de demonstração com um dispositivo virtual. Nenhum hardware real está conectado."
-                  : `${session.definition.name} identificado com sucesso. A sessão permanece ativa até você desconectar ou o dispositivo ser removido.`}
+                  : session.writesAllowed
+                    ? `${session.definition.name} identificado com sucesso. A sessão permanece ativa até você desconectar ou o dispositivo ser removido.`
+                    : `${session.definition.name} identificado com sucesso. A gravação permanece desabilitada: esta revisão ainda não foi validada em hardware.`}
             </p>
           ) : busy ? (
             <p className="card-copy">
@@ -135,12 +147,12 @@ export default function Dashboard() {
           {session ? (
             <>
               <h3 id="target-title">
-                {session.readOnly
+                {!session.recognized
                   ? "Modelo não reconhecido"
                   : "Dispositivo conectado"}
               </h3>
               <p className="card-copy">
-                {session.readOnly
+                {!session.recognized
                   ? "O modelo não foi reconhecido. Família e layout abaixo são um padrão conservador, não informações confirmadas."
                   : isDemo
                     ? "Sessão de demonstração com dados virtuais. Nenhum dado é enviado para fora deste navegador."
@@ -148,7 +160,7 @@ export default function Dashboard() {
               </p>
 
               <dl className="device-facts">
-                {session.readOnly ? (
+                {!session.recognized ? (
                   <>
                     <div className="fact">
                       <dt>Nome provisório</dt>
@@ -192,7 +204,11 @@ export default function Dashboard() {
                 )}
               </dl>
 
-              <p className="read-only-badge">Somente leitura nesta fase</p>
+              <p className="read-only-badge">
+                {session.readOnly
+                  ? "Somente leitura: gravação não validada"
+                  : "Somente leitura nesta fase"}
+              </p>
             </>
           ) : (
             <>
