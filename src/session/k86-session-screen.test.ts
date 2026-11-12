@@ -70,22 +70,22 @@ describe("K86Session screen transfer", () => {
     const session = await openSession(t);
     t.replies.push(ackReply());
 
-    await session.sendScreenAnimation(animation(), { slot: 2, pageDelayMs: 0, ackDelayMs: 0 });
+    await session.sendScreenAnimation(animation(), { slot: 2, pageDelayMs: 0, ackDelayMs: 0, ackPollMs: 0 });
 
     const announces = t.sent.filter((p) => p[0] === 0xa5);
     expect(announces).toHaveLength(1);
-    expect(announces[0][1]).toBe(0);
+    expect(announces[0][1]).toBe(2);
     expect(announces[0][2]).toBe(1);
-    expect(announces[0][3]).toBe(50);
-    expect(announces[0][18]).toBe(2);
+    expect(announces[0][3]).toBe(0);
+    expect(announces[0][18]).toBe(0);
 
     const pages = t.sent.filter((p) => p[0] === 0x25);
     expect(pages).toHaveLength(Math.ceil((SCREEN_WIDTH * SCREEN_HEIGHT * 2) / 56));
-    expect(pages[0][1]).toBe(0);
+    expect(pages[0][1]).toBe(2);
     expect(pages[0][2]).toBe(1);
-    expect(pages[0][3]).toBe(50);
+    expect(pages[0][3]).toBe(0);
     expect(pages[0][4]).toBe(0);
-    expect(pages[pages.length - 1][1]).toBe(0);
+    expect(pages[pages.length - 1][1]).toBe(2);
   });
 
   it("sends every frame with frameCount and frame index", async () => {
@@ -93,7 +93,7 @@ describe("K86Session screen transfer", () => {
     const session = await openSession(t);
     t.replies.push(ackReply());
 
-    await session.sendScreenAnimation(animation(2), { slot: 0, pageDelayMs: 0, ackDelayMs: 0 });
+    await session.sendScreenAnimation(animation(2), { slot: 0, pageDelayMs: 0, ackDelayMs: 0, ackPollMs: 0 });
 
     const pages = t.sent.filter((p) => p[0] === 0x25);
     expect(pages).toHaveLength(2 * Math.ceil((SCREEN_WIDTH * SCREEN_HEIGHT * 2) / 56));
@@ -107,7 +107,7 @@ describe("K86Session screen transfer", () => {
     t.replies = Array.from({ length: 10 }, () => new Uint8Array([0xa5, 0]));
 
     await expect(
-      session.sendScreenAnimation(animation(), { slot: 0, pageDelayMs: 0, ackDelayMs: 0 }),
+      session.sendScreenAnimation(animation(), { slot: 0, pageDelayMs: 0, ackDelayMs: 0, ackPollMs: 0 }),
     ).rejects.toBeInstanceOf(ScreenAckError);
     expect(t.sent.every((p) => p[0] === 0xa5)).toBe(true);
   });
@@ -117,7 +117,7 @@ describe("K86Session screen transfer", () => {
     const session = await openSession(t);
 
     await expect(
-      session.sendScreenAnimation(animation(), { slot: 5, pageDelayMs: 0, ackDelayMs: 0 }),
+      session.sendScreenAnimation(animation(), { slot: 5, pageDelayMs: 0, ackDelayMs: 0, ackPollMs: 0 }),
     ).rejects.toThrow(/slot/i);
     expect(t.sent).toEqual([]);
   });
@@ -128,7 +128,7 @@ describe("K86Session screen transfer", () => {
     expect(session.writesAllowed).toBe(false);
 
     await expect(
-      session.sendScreenAnimation(animation(), { slot: 0, pageDelayMs: 0, ackDelayMs: 0 }),
+      session.sendScreenAnimation(animation(), { slot: 0, pageDelayMs: 0, ackDelayMs: 0, ackPollMs: 0 }),
     ).rejects.toThrow(/somente leitura/i);
     expect(t.sent).toEqual([]);
   });
@@ -143,7 +143,7 @@ describe("K86Session screen transfer", () => {
       session.sendScreenAnimation(animation(), {
         slot: 0,
         pageDelayMs: 0,
-        ackDelayMs: 0,
+        ackDelayMs: 0, ackPollMs: 0,
         signal: controller.signal,
       }),
     ).rejects.toMatchObject({ name: "AbortError" });

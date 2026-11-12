@@ -33,10 +33,12 @@ export interface ScreenTransferOptions {
   slot: number;
   onProgress?: (done: number, total: number) => void;
   signal?: AbortSignal;
-  /** Test hook: page pacing in ms. The vendor uses 2 ms. */
+  /** Test hook: page pacing in ms. The vendor uses 1–2 ms. */
   pageDelayMs?: number;
-  /** Test hook: delay between announce polls in ms. The vendor uses 100 ms. */
+  /** Test hook: wait after the announce before polling for the ack. */
   ackDelayMs?: number;
+  /** Test hook: gap between ack polls. */
+  ackPollMs?: number;
 }
 
 function abortError(): Error {
@@ -207,40 +209,56 @@ export class K86Session {
       encodeScreenPixels(frame, SCREEN_WIDTH, SCREEN_HEIGHT),
     );
     const frameCount = frameData.length;
-    const delayMs = Math.max(0, Math.min(255, Math.round(animation.delayMs)));
+    const still = frameCount === 1;
+    const delayMs = still
+      ? 0
+      : Math.max(0, Math.min(255, Math.round(animation.delayMs)));
     const slot = options.slot;
     const pageDelayMs = options.pageDelayMs ?? 2;
-    const ackDelayMs = options.ackDelayMs ?? 100;
+    const ackDelayMs = options.ackDelayMs ?? 50;
+    const ackPollMs = options.ackPollMs ?? 50;
     const signal = options.signal;
 
     if (signal?.aborted) throw abortError();
 
+    // A still picture uses the slot as its frame index and layer 0, matching
+    // the vendor's PNG path. An animation uses frame indices and carries the
+    // requested slot in byte 18 of the announce.
     const announce = screenAnnouncePacket({
-      frame: 0,
+      frame: still ? slot : 0,
       frameCount,
       delayMs,
       length: frameData[0].length,
       bbox: { left: 0, top: 0, right: SCREEN_WIDTH, bottom: SCREEN_HEIGHT },
-      slot,
+      slot: still ? 0 : slot,
     });
+
+    // The working K86 implementation sends the announce once, waits, then
+    // polls feature reports. Some Windows stacks expose the report ID at
+    // byte 0, so the protocol's acknowledge byte can be at [1] or [2].
+    await this.sendFeatureReport(announce);
+    await sleep(ackDelayMs);
 
     let acknowledged = false;
     for (let attempt = 0; attempt < SCREEN_ACK_ATTEMPTS; attempt++) {
       if (signal?.aborted) throw abortError();
-      await this.sendFeatureReport(announce);
-      const reply = await this.receiveFeatureReport();
-      if (reply.length > 1 && reply[1] === 1) {
-        acknowledged = true;
-        break;
+      try {
+        const reply = await this.receiveFeatureReport();
+        if (reply[1] === 1 || reply[2] === 1) {
+          acknowledged = true;
+          break;
+        }
+      } catch {
+        // A missing report is expected while the display is busy; keep polling.
       }
-      await sleep(ackDelayMs);
+      await sleep(ackPollMs);
     }
     if (!acknowledged) throw new ScreenAckError();
 
     for (let frame = 0; frame < frameCount; frame++) {
       if (signal?.aborted) throw abortError();
       const pages = screenPagePackets({
-        frame,
+        frame: still ? slot : frame,
         frameCount,
         delayMs,
         data: frameData[frame],
