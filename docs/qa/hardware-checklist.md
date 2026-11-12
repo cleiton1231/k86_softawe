@@ -1,5 +1,10 @@
 # Checklist de hardware — K86 Studio (fundação)
 
+> **Nota:** este registro cobre apenas a fundação somente leitura. A validação
+> de gravação da tela e dos GIFs está em
+> [`screen-hardware.md`](screen-hardware.md), com o protocolo em
+> [`../analysis/protocol-k86-screen.md`](../analysis/protocol-k86-screen.md).
+
 - **Execução registrada:** 2026-11-12
 - **Status:** executado com sucesso
 - **Host:** Windows 11
