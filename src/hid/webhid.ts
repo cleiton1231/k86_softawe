@@ -1,21 +1,27 @@
-/// <reference path="./webhid.d.ts" />
 import type { HidDeviceInfo, HidTransport } from "./transport";
 
 const K86_VENDOR_ID = 0x3151;
-const K86_VENDOR_USAGE_PAGE = 0xffff;
-const K86_VENDOR_USAGE = 0x0002;
+const VENDOR_USAGE_PAGE = 0xffff;
+const VENDOR_USAGE = 0x0002;
+const FALLBACK_USAGE_PAGE = 0x0001;
+const FALLBACK_USAGE = 0x0002;
 
 const K86_FILTER: HIDDeviceFilter = {
   vendorId: K86_VENDOR_ID,
-  usagePage: K86_VENDOR_USAGE_PAGE,
-  usage: K86_VENDOR_USAGE,
+  usagePage: VENDOR_USAGE_PAGE,
+  usage: VENDOR_USAGE,
 };
 
-function hasVendorCollection(device: HIDDevice): boolean {
-  return device.collections.some(
-    (collection) =>
-      collection.usagePage === K86_VENDOR_USAGE_PAGE &&
-      collection.usage === K86_VENDOR_USAGE,
+function hasCollection(
+  device: HIDDevice,
+  usagePage: number,
+  usage: number,
+): boolean {
+  return (
+    device.collections?.some(
+      (collection) =>
+        collection.usagePage === usagePage && collection.usage === usage,
+    ) ?? false
   );
 }
 
@@ -24,7 +30,7 @@ export function isWebHidSupported(): boolean {
 }
 
 /**
- * Asks the user to pick the K86 vendor-defined HID collection.
+ * Asks the user to pick the K86 HID collection.
  * Must be called from a user gesture (for example, a click handler);
  * the browser rejects the request otherwise.
  */
@@ -36,13 +42,31 @@ export async function requestK86Device(): Promise<HIDDevice> {
   }
 
   const devices = await navigator.hid.requestDevice({ filters: [K86_FILTER] });
-  const device = devices.find(hasVendorCollection);
-  if (!device) {
-    throw new Error(
-      "Nenhum dispositivo K86 com a coleção HID 0xFFFF/0x0002 foi selecionado.",
-    );
+  if (devices.length === 0) {
+    throw new Error("Seleção cancelada: nenhum dispositivo foi escolhido.");
   }
-  return device;
+
+  const vendorDevice = devices.find((device) =>
+    hasCollection(device, VENDOR_USAGE_PAGE, VENDOR_USAGE),
+  );
+  if (vendorDevice) return vendorDevice;
+
+  // The generic 0x0001/0x0002 collection is only acceptable for read-only
+  // identification in this phase. Write features must require the vendor
+  // 0xFFFF/0x0002 collection, which is the settings interface.
+  const fallbackDevice = devices.find((device) =>
+    hasCollection(device, FALLBACK_USAGE_PAGE, FALLBACK_USAGE),
+  );
+  if (fallbackDevice) {
+    console.info(
+      "WebHID: usando a coleção de fallback 0x0001/0x0002; somente identificação em modo somente leitura.",
+    );
+    return fallbackDevice;
+  }
+
+  throw new Error(
+    "O dispositivo selecionado não expõe a coleção HID 0xFFFF/0x0002 nem a coleção de fallback 0x0001/0x0002.",
+  );
 }
 
 export class WebHidTransport implements HidTransport {
@@ -51,10 +75,22 @@ export class WebHidTransport implements HidTransport {
   private readonly device: HIDDevice;
   private readonly listeners = new Set<() => void>();
   private closed = false;
+  private watchingDisconnect = false;
+  private closePromise: Promise<void> | undefined;
 
   private readonly handleDisconnect = (event: HIDConnectionEvent): void => {
     if (event.device !== this.device) return;
-    for (const listener of this.listeners) listener();
+    const listeners = [...this.listeners];
+    this.closed = true;
+    this.listeners.clear();
+    this.detachDisconnectListener();
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error("WebHID: listener de desconexão falhou.", error);
+      }
+    }
   };
 
   constructor(device: HIDDevice) {
@@ -78,19 +114,43 @@ export class WebHidTransport implements HidTransport {
   onDisconnect(listener: () => void): void {
     if (this.closed) return;
     this.listeners.add(listener);
-    if (this.listeners.size === 1) {
-      navigator.hid.addEventListener("disconnect", this.handleDisconnect);
-    }
+    this.attachDisconnectListener();
   }
 
-  async close(): Promise<void> {
-    if (this.closed) return;
-    this.closed = true;
-    this.listeners.clear();
+  close(): Promise<void> {
+    if (!this.closePromise) {
+      this.closePromise = this.finishClose();
+    }
+    return this.closePromise;
+  }
+
+  private attachDisconnectListener(): void {
+    if (this.watchingDisconnect) return;
+    if (typeof navigator === "undefined" || !navigator.hid) return;
+    navigator.hid.addEventListener("disconnect", this.handleDisconnect);
+    this.watchingDisconnect = true;
+  }
+
+  private detachDisconnectListener(): void {
+    if (!this.watchingDisconnect) return;
+    this.watchingDisconnect = false;
     if (typeof navigator !== "undefined" && navigator.hid) {
       navigator.hid.removeEventListener("disconnect", this.handleDisconnect);
     }
-    await this.device.close();
+  }
+
+  private async finishClose(): Promise<void> {
+    this.closed = true;
+    this.listeners.clear();
+    this.detachDisconnectListener();
+    try {
+      await this.device.close();
+    } catch (error) {
+      console.warn(
+        "WebHID: falha ao fechar o dispositivo; a conexão será considerada encerrada.",
+        error,
+      );
+    }
   }
 }
 
