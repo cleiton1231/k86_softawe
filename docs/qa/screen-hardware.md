@@ -51,6 +51,9 @@
 - `C:\Users\vitor\AppData\Local\Temp\k86\test-giphy-106.gif`: 106 frames
   extraídos do `giphy.gif`, delay 100 ms, ~6,9 MB, dentro do limite de 20 MB do
   app e do limite de 106 frames da tela.
+- `C:\Users\vitor\Downloads\giphy-106-max.gif`: cópia estável do arquivo de 106
+  frames usada no teste final, para o usuário reutilizar sem depender da pasta
+  temporária.
 
 ## Passos executados
 
@@ -128,7 +131,7 @@ após um ciclo de energia será registrada na próxima reexecução.
 - O caminho WebHID leva ~100 ms por feature report no navegador. Um frame tem
   1.158 páginas; por isso GIFs grandes são inviáveis no WebHID.
 - O caminho Electron envia o lote inteiro por um único IPC e usa `node-hid` no
-  processo principal. O `sendFeatureReport` síncrono já pacing natural; um
+  processo principal. O `sendFeatureReport` síncrono já faz o pacing natural; um
   `setTimeout(1)` por página no Windows custa ~15,6 ms e foi removido.
 - O processo principal cede o event loop a cada 16 páginas para manter o
   progresso, o cancelamento e a janela responsivos.
