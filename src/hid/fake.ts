@@ -1,17 +1,19 @@
 import type { HidDeviceInfo, HidTransport } from "./transport";
+import { REPORT_LEN } from "../protocol/packet";
 
 export class FakeTransport implements HidTransport {
   readonly info: HidDeviceInfo;
   private reply: Uint8Array;
   private disconnectListeners: Array<() => void> = [];
+  private notified = false;
 
   constructor(info: HidDeviceInfo, reply: Uint8Array) {
     this.info = info;
-    this.reply = reply;
+    this.reply = reply.slice();
   }
 
   static withIdentify(deviceId: number, pid: number): FakeTransport {
-    const reply = new Uint8Array(64);
+    const reply = new Uint8Array(REPORT_LEN);
     reply[0] = 0x8f;
     reply[1] = deviceId & 0xff;
     reply[2] = (deviceId >> 8) & 0xff;
@@ -31,6 +33,8 @@ export class FakeTransport implements HidTransport {
   }
 
   async disconnect(): Promise<void> {
+    if (this.notified) return;
+    this.notified = true;
     for (const listener of this.disconnectListeners) listener();
   }
 
