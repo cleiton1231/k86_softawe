@@ -28,8 +28,12 @@ describe("useDevice", () => {
       await result.current.connect();
     });
     expect(result.current.state.status).toBe("error");
+    expect(result.current.state.source).toBeUndefined();
     expect(result.current.state.error).toMatch(/webhid/i);
     expect(result.current.state.error).toMatch(/demo/i);
+    expect(result.current.state.error).not.toContain(
+      "Não foi possível identificar",
+    );
   });
 
   it("connects in demo mode", async () => {
@@ -38,6 +42,7 @@ describe("useDevice", () => {
       await result.current.connectDemo();
     });
     expect(result.current.state.status).toBe("connected");
+    expect(result.current.state.source).toBe("demo");
     expect(result.current.state.session?.definition.id).toBe(1168);
     expect(result.current.state.session?.definition.family).toBe("yc500");
   });
@@ -56,6 +61,7 @@ describe("useDevice", () => {
     expect(webhid.requestK86Device).toHaveBeenCalledTimes(1);
     expect(webhid.openWebHidTransport).toHaveBeenCalledTimes(1);
     expect(result.current.state.status).toBe("connected");
+    expect(result.current.state.source).toBe("webhid");
     expect(result.current.state.session?.definition.id).toBe(1168);
 
     await act(async () => {
@@ -63,6 +69,7 @@ describe("useDevice", () => {
     });
 
     expect(result.current.state.status).toBe("disconnected");
+    expect(result.current.state.source).toBeUndefined();
     expect(result.current.state.session).toBeUndefined();
     expect(result.current.state.error).toBeUndefined();
   });
@@ -79,8 +86,28 @@ describe("useDevice", () => {
     });
 
     expect(result.current.state.status).toBe("error");
-    expect(result.current.state.error).toMatch(/seleção cancelada/i);
+    expect(result.current.state.source).toBeUndefined();
+    expect(result.current.state.error).toBe(
+      "Seleção cancelada: nenhum dispositivo foi escolhido.",
+    );
     expect(webhid.openWebHidTransport).not.toHaveBeenCalled();
+  });
+
+  it("wraps unexpected errors in Portuguese and preserves the message", async () => {
+    webhid.supported = true;
+    webhid.requestK86Device.mockResolvedValue({});
+    webhid.openWebHidTransport.mockRejectedValue(new Error("device busy"));
+
+    const { result } = renderHook(() => useDevice());
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.state.status).toBe("error");
+    expect(result.current.state.source).toBeUndefined();
+    expect(result.current.state.error).toBe(
+      "Não foi possível identificar o teclado: device busy",
+    );
   });
 
   it("closes the session and clears state on disconnect", async () => {
@@ -99,6 +126,7 @@ describe("useDevice", () => {
 
     expect(close).toHaveBeenCalledTimes(1);
     expect(result.current.state.status).toBe("disconnected");
+    expect(result.current.state.source).toBeUndefined();
     expect(result.current.state.session).toBeUndefined();
   });
 });

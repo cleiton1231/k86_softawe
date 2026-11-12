@@ -351,6 +351,13 @@ a {
   margin-bottom: 1.25rem;
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -371,6 +378,41 @@ a {
   border-radius: 50%;
   background: var(--text-faint);
   box-shadow: 0 0 0 3px rgba(109, 123, 141, 0.15);
+}
+
+.status-pill[data-status="connected"] {
+  border-color: var(--accent-border);
+  color: var(--accent-strong);
+}
+
+.status-pill[data-status="connected"] .status-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(110, 231, 242, 0.14);
+}
+
+.status-pill[data-status="error"] {
+  border-color: rgba(255, 138, 128, 0.42);
+  color: #ffc3bd;
+}
+
+.status-pill[data-status="error"] .status-dot {
+  background: #ff8a80;
+  box-shadow: 0 0 0 3px rgba(255, 138, 128, 0.14);
+}
+
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: rgba(110, 231, 242, 0.12);
+  color: var(--accent-strong);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .phase-tag {

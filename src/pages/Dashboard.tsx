@@ -21,6 +21,11 @@ export default function Dashboard() {
   const { state, connect, connectDemo, disconnect } = useDevice();
   const session = state.status === "connected" ? state.session : undefined;
   const busy = state.status === "connecting";
+  const isDemo = state.source === "demo";
+  const statusText =
+    state.status === "connected" && isDemo
+      ? "Conectado (demo)"
+      : statusLabels[state.status];
 
   return (
     <section className="page dashboard-page" aria-labelledby="dashboard-title">
@@ -47,9 +52,12 @@ export default function Dashboard() {
               data-status={state.status}
             >
               <span className="status-dot" aria-hidden="true" />
-              {statusLabels[state.status]}
+              {statusText}
             </span>
-            <span className="phase-tag">Somente leitura</span>
+            <div className="card-tags">
+              {isDemo && <span className="demo-badge">Demo</span>}
+              <span className="phase-tag">Somente leitura</span>
+            </div>
           </div>
 
           <h3 id="connection-title">
@@ -66,14 +74,17 @@ export default function Dashboard() {
             </p>
           ) : session ? (
             <p className="card-copy">
-              {session.definition.name} identificado com sucesso. A sessão
-              permanece ativa até você desconectar ou o dispositivo ser
-              removido.
+              {session.readOnly
+                ? "O ID interno deste dispositivo não corresponde a um modelo conhecido. A sessão usa uma definição conservadora e permanece somente leitura."
+                : isDemo
+                  ? "Sessão de demonstração com um dispositivo virtual. Nenhum hardware real está conectado."
+                  : `${session.definition.name} identificado com sucesso. A sessão permanece ativa até você desconectar ou o dispositivo ser removido.`}
             </p>
           ) : busy ? (
             <p className="card-copy">
-              Aguardando a seleção do dispositivo no navegador. Mantenha o
-              teclado conectado por USB.
+              {state.source === "webhid"
+                ? "Aguardando a seleção do dispositivo no navegador. Mantenha o teclado conectado por USB."
+                : "Conectando ao teclado..."}
             </p>
           ) : (
             <p className="card-copy">
@@ -123,29 +134,62 @@ export default function Dashboard() {
         <section className="target-card" aria-labelledby="target-title">
           {session ? (
             <>
-              <h3 id="target-title">Dispositivo conectado</h3>
+              <h3 id="target-title">
+                {session.readOnly
+                  ? "Modelo não reconhecido"
+                  : "Dispositivo conectado"}
+              </h3>
               <p className="card-copy">
-                Identificado em modo somente leitura. Nenhum dado é enviado
-                para fora deste navegador.
+                {session.readOnly
+                  ? "O modelo não foi reconhecido. Família e layout abaixo são um padrão conservador, não informações confirmadas."
+                  : isDemo
+                    ? "Sessão de demonstração com dados virtuais. Nenhum dado é enviado para fora deste navegador."
+                    : "Identificado em modo somente leitura. Nenhum dado é enviado para fora deste navegador."}
               </p>
 
               <dl className="device-facts">
-                <div className="fact">
-                  <dt>Nome</dt>
-                  <dd>{session.definition.name}</dd>
-                </div>
-                <div className="fact">
-                  <dt>ID interno</dt>
-                  <dd>{session.definition.id}</dd>
-                </div>
-                <div className="fact">
-                  <dt>Família</dt>
-                  <dd>{session.definition.family}</dd>
-                </div>
-                <div className="fact">
-                  <dt>Layout</dt>
-                  <dd>{layoutLabels[session.definition.layout]}</dd>
-                </div>
+                {session.readOnly ? (
+                  <>
+                    <div className="fact">
+                      <dt>Nome provisório</dt>
+                      <dd>{session.definition.name}</dd>
+                    </div>
+                    <div className="fact">
+                      <dt>ID interno</dt>
+                      <dd>{session.definition.id}</dd>
+                    </div>
+                    <div className="fact">
+                      <dt>Família</dt>
+                      <dd>{session.definition.family} (padrão conservador)</dd>
+                    </div>
+                    <div className="fact">
+                      <dt>Layout</dt>
+                      <dd>
+                        {layoutLabels[session.definition.layout]} (padrão
+                        conservador)
+                      </dd>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fact">
+                      <dt>Nome</dt>
+                      <dd>{session.definition.name}</dd>
+                    </div>
+                    <div className="fact">
+                      <dt>ID interno</dt>
+                      <dd>{session.definition.id}</dd>
+                    </div>
+                    <div className="fact">
+                      <dt>Família</dt>
+                      <dd>{session.definition.family}</dd>
+                    </div>
+                    <div className="fact">
+                      <dt>Layout</dt>
+                      <dd>{layoutLabels[session.definition.layout]}</dd>
+                    </div>
+                  </>
+                )}
               </dl>
 
               <p className="read-only-badge">Somente leitura nesta fase</p>

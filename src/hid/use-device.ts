@@ -8,10 +8,13 @@ import {
   requestK86Device,
 } from "./webhid";
 
+export type ConnectionSource = "webhid" | "demo";
+
 export type ConnectionState = {
   status: "disconnected" | "connecting" | "connected" | "error";
   session?: K86Session;
   error?: string;
+  source?: ConnectionSource;
 };
 
 const WEBHID_UNAVAILABLE =
@@ -21,10 +24,18 @@ const GENERIC_ERROR =
   "Não foi possível conectar ao teclado. Tente novamente ou use o modo demo.";
 
 function describeError(error: unknown): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
+  if (!(error instanceof Error) || error.message.trim().length === 0) {
+    return GENERIC_ERROR;
   }
-  return GENERIC_ERROR;
+
+  const message = error.message.trim();
+  if (message.startsWith("WebHID não está disponível")) {
+    return message;
+  }
+  if (message.startsWith("Seleção cancelada")) {
+    return message;
+  }
+  return `Não foi possível identificar o teclado: ${message}`;
 }
 
 async function closeQuietly(
@@ -70,7 +81,11 @@ export function useDevice() {
   }, []);
 
   const adoptSession = useCallback(
-    (session: K86Session, transport: HidTransport): void => {
+    (
+      session: K86Session,
+      transport: HidTransport,
+      source: ConnectionSource,
+    ): void => {
       if (!mountedRef.current) {
         void closeQuietly(
           session,
@@ -96,7 +111,7 @@ export function useDevice() {
         );
       }
 
-      setState({ status: "connected", session });
+      setState({ status: "connected", session, source });
     },
     [],
   );
@@ -105,7 +120,7 @@ export function useDevice() {
     if (sessionRef.current) return;
 
     const operation = ++operationRef.current;
-    setState({ status: "connecting" });
+    setState({ status: "connecting", source: "webhid" });
 
     try {
       if (!isWebHidSupported()) {
@@ -123,7 +138,7 @@ export function useDevice() {
         );
         return;
       }
-      adoptSession(session, transport);
+      adoptSession(session, transport, "webhid");
     } catch (error) {
       if (operation !== operationRef.current) return;
       setState({ status: "error", error: describeError(error) });
@@ -134,7 +149,7 @@ export function useDevice() {
     if (sessionRef.current) return;
 
     const operation = ++operationRef.current;
-    setState({ status: "connecting" });
+    setState({ status: "connecting", source: "demo" });
 
     try {
       const transport = FakeTransport.withIdentify(1168, 0x4015);
@@ -147,7 +162,7 @@ export function useDevice() {
         );
         return;
       }
-      adoptSession(session, transport);
+      adoptSession(session, transport, "demo");
     } catch (error) {
       if (operation !== operationRef.current) return;
       setState({ status: "error", error: describeError(error) });
