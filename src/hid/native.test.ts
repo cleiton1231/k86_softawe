@@ -9,7 +9,6 @@ function installNativeApi(overrides: Partial<NativeApi> = {}): NativeApi {
       vendorId: 0x3151,
       productId: 0x4015,
       productName: "Gaming Keyboard",
-      path: "\\\\?\\HID#test",
     })),
     closeHid: vi.fn(async () => {}),
     sendFeature: vi.fn(async () => {}),

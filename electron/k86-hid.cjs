@@ -15,7 +15,8 @@ const REPORT_SIZE = 64;
 const FEATURE_REPORT_LENGTH = 65;
 const ACK_ATTEMPTS = 10;
 const ACK_DELAY_MS = 50;
-const PROGRESS_EVERY = 16;
+const YIELD_EVERY = 4;
+const MAX_SCREEN_PACKETS = 106 * 1158 + 1;
 
 function delay(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
@@ -67,6 +68,7 @@ class K86HidDevice {
     this.onDisconnect = onDisconnect;
     this.closed = false;
     this.activeJob = null;
+    this.message = Buffer.allocUnsafe(REPORT_SIZE + 1);
 
     device.on("error", () => {
       this.closed = true;
@@ -105,7 +107,6 @@ class K86HidDevice {
         vendorId: VENDOR_ID,
         productId: PRODUCT_ID,
         productName: match.product,
-        path: match.path,
       },
       options.onDisconnect,
     );
@@ -117,13 +118,42 @@ class K86HidDevice {
     }
   }
 
+  fail(error) {
+    if (this.closed) return;
+    this.closed = true;
+    if (this.activeJob) this.activeJob.cancelled = true;
+    const device = this.device;
+    this.device = null;
+    if (device) {
+      try {
+        device.close();
+      } catch {
+        // The device may already be gone after an unplug.
+      }
+    }
+    const callback = this.onDisconnect;
+    this.onDisconnect = null;
+    if (callback) {
+      try {
+        callback(error);
+      } catch (callbackError) {
+        console.warn("K86: erro no handler de desconexão.", callbackError);
+      }
+    }
+  }
+
   sendFeature(data) {
     this.requireOpen();
     const payload = Buffer.from(data);
     const message = Buffer.allocUnsafe(payload.length + 1);
     message[0] = 0;
     payload.copy(message, 1);
-    this.device.sendFeatureReport(message);
+    try {
+      this.device.sendFeatureReport(message);
+    } catch (error) {
+      this.fail(error);
+      throw error;
+    }
   }
 
   receiveFeature() {
@@ -139,15 +169,20 @@ class K86HidDevice {
     return report;
   }
 
-  sendPacket(packet) {
+  sendPacketAt(batch, offset) {
     this.requireOpen();
-    if (packet.length !== REPORT_SIZE) {
-      throw new Error(`pacote de tela com ${packet.length} bytes; esperado 64`);
+    this.message[0] = 0;
+    batch.copy(this.message, 1, offset, offset + REPORT_SIZE);
+    this.sendMessage();
+  }
+
+  sendMessage() {
+    try {
+      this.device.sendFeatureReport(this.message);
+    } catch (error) {
+      this.fail(error);
+      throw error;
     }
-    const message = Buffer.allocUnsafe(REPORT_SIZE + 1);
-    message[0] = 0;
-    packet.copy(message, 1);
-    this.device.sendFeatureReport(message);
   }
 
   cancelScreen() {
@@ -182,7 +217,11 @@ class K86HidDevice {
    */
   async sendScreen(batch, packetCount, onProgress) {
     this.requireOpen();
-    if (!Number.isInteger(packetCount) || packetCount < 1) {
+    if (
+      !Number.isInteger(packetCount) ||
+      packetCount < 1 ||
+      packetCount > MAX_SCREEN_PACKETS
+    ) {
       throw new Error("lote de tela inválido");
     }
     if (batch.length !== packetCount * REPORT_SIZE) {
@@ -205,29 +244,28 @@ class K86HidDevice {
       if (announce[0] !== 0xa5) {
         throw new Error("o lote de tela não começa com o anúncio 0xA5");
       }
-      this.sendPacket(announce);
+      this.sendPacketAt(batch, 0);
       let sent = 1;
       onProgress?.(sent, packetCount);
 
       await this.waitForScreenAck(job);
 
       let lastFrame = announce[1];
-      let nextProgress = sent + PROGRESS_EVERY;
       for (let index = 1; index < packetCount; index++) {
         if (job.cancelled) throw abortError();
-        const packet = packetAt(index);
-        if (packet[0] !== 0x25) {
-          throw new Error(`pacote de tela inesperado: 0x${packet[0].toString(16)}`);
+        const offset = index * REPORT_SIZE;
+        const opcode = batch[offset];
+        if (opcode !== 0x25) {
+          throw new Error(`pacote de tela inesperado: 0x${opcode.toString(16)}`);
         }
-        if (packet[1] !== lastFrame) {
+        const frame = batch[offset + 1];
+        if (frame !== lastFrame) {
           onProgress?.(sent, packetCount);
-          lastFrame = packet[1];
+          lastFrame = frame;
         }
-        this.sendPacket(packet);
+        this.sendPacketAt(batch, offset);
         sent += 1;
-        if (sent >= nextProgress) {
-          onProgress?.(sent, packetCount);
-          nextProgress += PROGRESS_EVERY;
+        if (sent % YIELD_EVERY === 0) {
           await yieldToEventLoop();
         }
       }

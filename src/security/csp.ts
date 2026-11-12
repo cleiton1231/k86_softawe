@@ -6,4 +6,4 @@
  * runtime backstop against any network access in production.
  */
 export const CONTENT_SECURITY_POLICY =
-  "default-src 'self'; connect-src 'none'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'";
+  "default-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; media-src 'none'; connect-src 'none'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; font-src 'self'";

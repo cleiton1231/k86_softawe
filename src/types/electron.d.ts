@@ -5,7 +5,6 @@ declare global {
     vendorId: number;
     productId: number;
     productName?: string;
-    path?: string;
   }
 
   interface K86NativeScreenProgress {
